@@ -3,12 +3,12 @@
   --green-900: #0C4546; --green-700: #006864; --green-500: #118282; --navy: #002740; --slate: #283943; --silver: #C2C3C9;
   --ink: #283943; --muted: #68747c; --line: #e1e3e7; --bg: #eff0f2; --card: #ffffff;
   --accent: #006864; --ok: #118282; --bad: #c0453f; --tint: #e3f0ef;
-  font-family: Montserrat, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  color: var(--ink);
+  /* Urbane is the brand typeface (Light 300, Medium 500, DemiBold 600); Montserrat is the manual's fallback. */
+  --font: urbane, Montserrat, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
-body { display: flex; flex-direction: column; background: var(--bg); font-size: 14px; overflow: hidden; }
+body { display: flex; flex-direction: column; background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 14px; font-weight: 500; overflow: hidden; }
 [hidden] { display: none !important; }
 
 .topbar { height: 56px; flex: none; display: flex; align-items: center; gap: 12px; padding: 0 16px; background: var(--green-900); color: #fff; }

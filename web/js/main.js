@@ -156,6 +156,8 @@ document.getElementById('zoom-out').addEventListener('click', () => zoomAt(size.
 document.getElementById('zoom-fit').addEventListener('click', fit);
 new ResizeObserver(resize).observe(canvas);
 assets.logo.addEventListener('load', () => { dirty = true; });
+// Canvas labels are drawn with the brand typeface: repaint once it has loaded.
+document.fonts?.load('600 11px urbane').then(() => { dirty = true; }).catch(() => {});
 
 // ---- render loop
 function frame(t) {

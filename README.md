@@ -51,8 +51,12 @@ Variáveis opcionais: `OFFICE_DB_PATH` (padrão `data/office.db`), `OFFICE_LLM_M
 python tools/build_artifact.py   # gera dist/artifact/escritorio-virtual.html
 ```
 
-Publicar a página com os módulos de `web/js` ao lado, usando `web/artifact/api.js` como `js/api.js`, e as
-capacidades `db` e `sample`.
+A fonte da marca (Urbane) é licenciada e não fica no repositório: no servidor ela vem do kit da Adobe Fonts; no
+artefato, o build embute os arquivos se eles estiverem em `web/fonts/` (`urbane-light.ttf`, `urbane-medium.ttf`,
+`urbane-demibold.ttf`) e, sem eles, usa Montserrat.
+
+Publicar a página com os módulos de `web/js` ao lado, usando `web/artifact/api.js` como `js/api.js`, mais
+`web/img/logo-white.png` como `img/logo-white.png`, e as capacidades `db` e `sample`.
 
 ## Arquitetura (servidor)
 

@@ -237,7 +237,7 @@ function roundRect(ctx, x, y, w, h, r) {
 
 function pill(ctx, x, y, text, s, o = {}) {
   ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
-  ctx.font = '600 11px Montserrat, system-ui, sans-serif';
+  ctx.font = '600 11px urbane, Montserrat, system-ui, sans-serif';
   const w = ctx.measureText(text).width + 18, h = 20;
   ctx.shadowColor = 'rgba(20, 30, 60, 0.18)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 2;
   roundRect(ctx, -w / 2, -h / 2, w, h, 10); ctx.fillStyle = o.bg || 'rgba(255,255,255,0.96)'; ctx.fill();
@@ -251,7 +251,7 @@ function badge(ctx, x, y, n, color, s) {
   ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
   ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fillStyle = color; ctx.fill();
   ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
-  ctx.fillStyle = '#fff'; ctx.font = '700 11px Montserrat, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#fff'; ctx.font = '600 11px urbane, Montserrat, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText(String(n), 0, 1); ctx.restore();
 }
 
@@ -436,7 +436,7 @@ export function render(ctx, view, t) {
   const label = (x, text) => { const p = iso(x, 0, WALL_H); pill(ctx, p[0], p[1] - 14 * ls, text, ls); };
   label(3, 'Sala do Big Boss'); label(9, 'Chief of Staff'); label(15, 'Copa'); label(22, 'Lazer');
   const bp = iso(BOSS.x, BOSS.y, 14), cp = iso(COS.x, COS.y, 14);
-  if (view.counts.boss) badge(ctx, bp[0] + 14 * ls, bp[1] - 48, view.counts.boss, C.bad, ls);
+  if (view.counts.boss) badge(ctx, bp[0] + 14 * ls, bp[1] - 48, view.counts.boss, B.g500, ls);
   if (working.has('cos')) bubble(ctx, cp[0] + 16 * ls, cp[1] - 46, t, ls);
   else if (view.counts.cos) badge(ctx, cp[0] + 14 * ls, cp[1] - 48, view.counts.cos, C.accent, ls);
 
