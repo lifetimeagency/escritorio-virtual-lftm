@@ -5,8 +5,8 @@ Escritório virtual isométrico para operar a agência de marketing com agentes 
 ## Contexto
 
 A direção (Big Boss) precisa delegar trabalho a áreas operadas por agentes de IA e receber de volta apenas o que
-está pronto. O escritório dá forma a esse fluxo: seis mesas (uma por área, Head na ponta), a sala do Chief of Staff
-(filtro de qualidade) e a sala do Big Boss.
+está pronto. O escritório dá forma a esse fluxo: seis mesas (uma por área, Head na ponta) e, no mezanino, a sala do
+Chief of Staff (filtro de qualidade) e a sala do Big Boss.
 
 ## Comportamento esperado
 
@@ -20,6 +20,10 @@ está pronto. O escritório dá forma a esse fluxo: seis mesas (uma por área, H
 5. **Decidir** — o Big Boss aprova ou pede ajustes (volta para a área e passa de novo pelo CoS).
 
 Os padrões de qualidade e o número de rodadas são editados na sala do CoS.
+
+Cada mesa tem uma tela de dashboard (também no botão **Dashboards**): tarefas por etapa, entregas ao longo do
+tempo, padrões que mais devolvem entregas, participação do time e a lista de tarefas, com filtro de período e área.
+Os números saem das próprias tarefas; novos blocos entram em `BLOCKS`, em `web/js/dashboard.js`.
 
 ## Duas formas de rodar
 

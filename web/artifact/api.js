@@ -317,6 +317,7 @@ export const api = {
     return task;
   },
   async task(id) { await ready; return getTask(id); },
+  async tasks() { await ready; return [...mem.tasks.values()].map(clone); },
   approve: (id) => bossAction(id, (t) => { need(t, ...AWAITING); t.status = 'approved'; log(t, 'boss', 'Big Boss aprovou a entrega.'); }),
   requestChanges: (id, feedback) => bossAction(id, (t) => {
     need(t, ...AWAITING);

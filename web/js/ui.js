@@ -70,7 +70,7 @@ export function md(src) {
   return out.join('');
 }
 
-export function createUI({ store, reload, onChange }) {
+export function createUI({ store, reload, onChange, openDashboard }) {
   const drawer = $('drawer'), body = $('drawer-body');
   let panel = null;      // current view descriptor
   let lastHtml = '';
@@ -168,6 +168,7 @@ export function createUI({ store, reload, onChange }) {
       const html = `${who(head)}
         <div class="row-actions"><button class="btn primary" data-act="delegate-to" data-id="${a.id}">Delegar tarefa</button>
         <button class="btn" data-act="hire-at" data-area="${a.id}" data-seat="${free[0] || ''}" ${free.length ? '' : 'disabled'}>Contratar agente</button></div>
+        <div class="row-actions" style="margin-top:8px"><button class="btn" data-act="dash" data-id="${a.id}">Abrir dashboard da área</button></div>
         <h3>Time (${team.length}/${st().seats_per_area})</h3>
         ${team.length ? `<div class="list">${team.map((m) => `<button class="item" data-act="agent" data-id="${m.id}"><div class="t"><span>${esc(m.name)}</span>${store.working.has(m.id) ? '<span class="chip prod">Trabalhando</span>' : ''}</div><div class="s">${esc(m.role)}</div></button>`).join('')}</div>` : '<div class="empty">Sem agentes ainda. O Head produz sozinho até você contratar o time.</div>'}
         <h3>Tarefas da área</h3>${taskList(mine, 'Nenhuma tarefa para esta área.')}
@@ -281,6 +282,7 @@ export function createUI({ store, reload, onChange }) {
 
   function openTarget(target) {
     if (target.type === 'room') return open(target.room === 'boss' ? { view: 'boss', tab: awaiting().length ? 'inbox' : 'delegate' } : { view: 'cos', tab: 'standards' });
+    if (target.type === 'dash') return openDashboard(target.areaId);
     if (target.type === 'area') return open({ view: 'area', areaId: target.areaId });
     if (target.type === 'agent') return open({ view: 'agent', agentId: target.agentId });
     if (target.type === 'seat') return open(area(target.areaId).name ? { view: 'hire', areaId: target.areaId, seat: target.seat } : { view: 'area', areaId: target.areaId });
@@ -299,6 +301,7 @@ export function createUI({ store, reload, onChange }) {
     else if (d.act === 'task') open({ view: 'task', taskId: d.id });
     else if (d.act === 'agent') open({ view: 'agent', agentId: d.id });
     else if (d.act === 'delegate-to') open({ view: 'boss', tab: 'delegate', areaId: Number(d.id) });
+    else if (d.act === 'dash') openDashboard(Number(d.id));
     else if (d.act === 'hire-at') open({ view: 'hire', areaId: Number(d.area), seat: Number(d.seat) });
     else if (d.act === 'ask-on') { panel.asking = true; paint(true); body.querySelector('textarea')?.focus(); }
     else if (d.act === 'ask-off') { panel.asking = false; paint(true); }
@@ -337,6 +340,7 @@ export function createUI({ store, reload, onChange }) {
   $('drawer-close').addEventListener('click', close);
   $('btn-delegate').addEventListener('click', () => open({ view: 'boss', tab: 'delegate' }));
   $('btn-inbox').addEventListener('click', () => open({ view: 'boss', tab: 'inbox' }));
+  $('btn-dash').addEventListener('click', () => openDashboard(null));
 
   // ---- called after every state refresh
   function onState() {
@@ -352,5 +356,5 @@ export function createUI({ store, reload, onChange }) {
     paint(false);
   }
 
-  return { open, openTarget, close, onState, toast };
+  return { open, openTarget, close, onState, toast, openTask: (taskId) => open({ view: 'task', taskId }) };
 }

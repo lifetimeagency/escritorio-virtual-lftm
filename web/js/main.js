@@ -3,6 +3,7 @@ import { api } from './api.js';
 import { inPoly } from './iso.js';
 import { render, bounds, keyOf, seatPos, assets, BOSS, COS } from './scene.js';
 import { createUI, AWAITING } from './ui.js';
+import { createDashboard } from './dashboard.js';
 
 const canvas = document.getElementById('office');
 const ctx = canvas.getContext('2d');
@@ -81,6 +82,7 @@ async function reload() {
   store.state = next;
   store.working = new Set(next.tasks.flatMap((t) => (['in_production', 'in_review'].includes(t.status) && t.activity ? t.activity.agent_ids : [])));
   ui.onState();
+  dashboard.refresh();
   dirty = true;
 }
 
@@ -99,6 +101,7 @@ function describe(target) {
     return area.name ? `${area.name} — Head: ${head?.name || ''}` : `Mesa ${area.id} — definir área e Head`;
   }
   if (target.type === 'seat') return area.name ? `Contratar agente para ${area.name}` : 'Defina a área antes de contratar';
+  if (target.type === 'dash') return area.name ? `Dashboard de ${area.name}` : 'Dashboard da agência';
   const a = s.agents.find((x) => x.id === target.agentId);
   return a ? `${a.name} · ${a.role}${store.working.has(a.id) ? ' — trabalhando' : ''}` : '';
 }
@@ -175,10 +178,20 @@ function frame(t) {
     boss: store.state.tasks.filter((x) => AWAITING.includes(x.status)).length,
     cos: store.state.tasks.filter((x) => x.status === 'in_review').length,
   };
-  hits = render(ctx, { state: store.state, working: store.working, hover: store.hover, selected: store.selected, zoom: cam.zoom, flights: store.flights, counts }, t);
+  // per-area levels for the wall screens: in production, with the CoS, awaiting the boss, approved, failed
+  const load = {};
+  for (const x of store.state.tasks) {
+    const i = { in_production: 0, in_review: 1, delivered: 2, escalated: 2, approved: 3, failed: 4 }[x.status];
+    if (i === undefined) continue;
+    (load[x.area_id] ||= [0, 0, 0, 0, 0])[i] += 1;
+  }
+  for (const k of Object.keys(load)) { const max = Math.max(...load[k]); load[k] = load[k].map((v) => v / max); }
+  hits = render(ctx, { state: store.state, working: store.working, hover: store.hover, selected: store.selected, zoom: cam.zoom, flights: store.flights, counts, load }, t);
 }
 
-ui = createUI({ store, reload, onChange: () => { dirty = true; } });
+let dashboard;
+ui = createUI({ store, reload, onChange: () => { dirty = true; }, openDashboard: (areaId) => dashboard.show(areaId) });
+dashboard = createDashboard({ store, api, openTask: (id) => ui.openTask(id) });
 resize();
 reload().catch((e) => ui.toast(e.message, true));
 setInterval(() => { if (!document.hidden) reload().catch(() => {}); }, 1500);

@@ -29,6 +29,9 @@ def test_full_flow_over_http():
         assert state["tasks"][0]["last_review"]["approved"] is True
         assert len(state["agents"]) == 2 and len(state["areas"]) == 6
 
+        full = client.get("/api/tasks").json()
+        assert len(full) == 1 and len(full[0]["reviews"]) == 2 and full[0]["contributions"][0]["agent_name"] == "Bia"
+
         assert client.post(f"/api/tasks/{task_id}/approve").json()["status"] == "approved"
         assert client.post(f"/api/tasks/{task_id}/approve").status_code == 409
         assert client.get("/api/tasks/nope").status_code == 404

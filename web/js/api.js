@@ -21,6 +21,7 @@ export const api = {
   saveSettings: (body) => req('PUT', '/api/settings', body),
   delegate: (body) => req('POST', '/api/tasks', body),
   task: (id) => req('GET', `/api/tasks/${id}`),
+  tasks: () => req('GET', '/api/tasks'),
   approve: (id) => req('POST', `/api/tasks/${id}/approve`),
   requestChanges: (id, feedback) => req('POST', `/api/tasks/${id}/request-changes`, { feedback }),
   retry: (id) => req('POST', `/api/tasks/${id}/retry`),

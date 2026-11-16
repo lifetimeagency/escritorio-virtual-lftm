@@ -96,6 +96,11 @@ def create_app(repo: OfficeRepository, llm: LlmGateway) -> FastAPI:
     async def delegate(body: TaskIn):
         return wf().delegate(body.title, body.briefing, body.area_id).to_dict()
 
+    @app.get("/api/tasks")
+    def list_tasks():
+        """Full tasks (reviews, contributions, events) for the dashboards."""
+        return [t.to_dict() for t in repo.list_tasks()]
+
     @app.get("/api/tasks/{task_id}")
     def get_task(task_id: str):
         return repo.get_task(task_id).to_dict()
