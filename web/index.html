@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Escritório Virtual · LFTM</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="logo"></span>Escritório Virtual <small>LFTM</small></div>
+    <div class="stats" id="stats"></div>
+    <button class="btn ghost" id="btn-inbox">Entregas <span class="count" id="inbox-count" hidden>0</span></button>
+    <button class="btn primary" id="btn-delegate">Delegar tarefa</button>
+  </header>
+  <div class="banner" id="banner" hidden></div>
+  <div class="stage">
+    <main class="office">
+      <canvas id="office" aria-label="Escritório virtual"></canvas>
+      <div class="zoom">
+        <button id="zoom-in" title="Aproximar">+</button>
+        <button id="zoom-out" title="Afastar">−</button>
+        <button id="zoom-fit" title="Enquadrar o escritório">⤢</button>
+      </div>
+      <div class="hint">Clique em uma sala, mesa ou cadeira · arraste para mover · role para aproximar</div>
+      <div class="tooltip" id="tooltip" hidden></div>
+    </main>
+    <aside class="drawer" id="drawer" hidden>
+      <header>
+        <div><h2 id="drawer-title"></h2><p id="drawer-sub"></p></div>
+        <button class="icon" id="drawer-close" title="Fechar">×</button>
+      </header>
+      <div class="drawer-body" id="drawer-body"></div>
+    </aside>
+  </div>
+  <div class="toast" id="toast" hidden></div>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

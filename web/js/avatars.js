@@ -1,0 +1,131 @@
+// Pixel-art seated avatars, generated from small character maps and cached as sprites.
+const PX = 2; // screen pixels per sprite pixel
+const OUTLINE = '#262d3d';
+
+const FRONT = [
+  '...HHHHHHH...',
+  '..HHHHHHHHH..',
+  '.HHHHHHHHHHH.',
+  '.HHHSSSSSHHH.',
+  '.HHSSSSSSSHH.',
+  '.HSSSSSSSSHH.',
+  '.HSESSSESSHH.',
+  '.SSSSSSSSSSH.',
+  '..SSSSSSSSS..',
+  '..SSSmmSSSS..',
+  '...SSSSSSS...',
+  '....TTTTT....',
+  '..TTTTTTTTT..',
+  '.TTTTTTTTTTT.',
+  '.TTtTTTTTtTT.',
+  '.TTtTTTTTtTT.',
+  '.SStTTTTTtSS.',
+  '...PPPPPPP...',
+  '...PPPPPPP...',
+];
+const BACK = [
+  '...HHHHHHH...',
+  '..HHHHHHHHH..',
+  '.HHHHHHHHHHH.',
+  '.HHHHHHHHHHH.',
+  '.HHHHHHHHHHH.',
+  '.HHHHHHHHHHH.',
+  '.HHHHHHHHHHH.',
+  '.HHHHHHHHHHH.',
+  '..HHHHHHHHH..',
+  '..SHHHHHHHS..',
+  '...SSSSSSS...',
+  '....TTTTT....',
+  '..TTTTTTTTT..',
+  '.TTTTTTTTTTT.',
+  '.TTtTTTTTtTT.',
+  '.TTtTTTTTtTT.',
+  '.TTtTTTTTtTT.',
+  '...TTTTTTT...',
+  '...TTTTTTT...',
+];
+
+const SKIN = ['#f6d3b3', '#eebd94', '#d9a070', '#b47a4e', '#8a5a38'];
+const HAIR = ['#2b2320', '#4a3324', '#7a4a26', '#c08a3e', '#d9c08a', '#5b3a2e', '#a3402c'];
+const SHIRT = ['#4f7cff', '#2fa88a', '#e2725b', '#8b6fd6', '#f0b541', '#3aa0c9', '#d85c8a', '#5c6b82', '#ffffff', '#3f9b55'];
+const PANTS = ['#2f3a52', '#3d4350', '#5a4a3c', '#27324a'];
+
+const SPECIAL = {
+  boss: { skin: SKIN[1], hair: HAIR[0], shirt: '#1f2a44', pants: '#1a2338', style: 0, tie: '#d64545' },
+  cos: { skin: SKIN[2], hair: HAIR[1], shirt: '#3d4656', pants: '#2b3140', style: 1, tie: null, collar: true },
+};
+
+function rand(seed) { // small deterministic generator
+  let s = (seed * 2654435761) >>> 0;
+  return () => { s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; };
+}
+
+function lookFor(key) {
+  if (SPECIAL[key]) return SPECIAL[key];
+  const r = rand(Number(key) + 7);
+  const pick = (a) => a[Math.floor(r() * a.length)];
+  return { skin: pick(SKIN), hair: pick(HAIR), shirt: pick(SHIRT), pants: pick(PANTS), style: Math.floor(r() * 4) };
+}
+
+function styled(rows, style, back) {
+  const g = rows.map((r) => r.split(''));
+  const set = (y, x, c) => { if (g[y] && g[y][x] !== undefined) g[y][x] = c; };
+  if (style === 1) { // long hair
+    for (let y = 7; y <= 12; y++) { set(y, 1, 'H'); set(y, 11, 'H'); if (back) for (let x = 2; x <= 10; x++) if (y <= 11) set(y, x, 'H'); }
+  } else if (style === 2) { // bun
+    g.unshift('.....HHH.....'.split(''), '....HHHHH....'.split(''));
+  } else if (style === 3 && !back) { // open forehead
+    for (let x = 3; x <= 8; x++) set(3, x, 'S');
+    set(4, 2, 'S'); set(2, 3, 'H');
+  }
+  return g;
+}
+
+const cache = new Map();
+
+export function sprite(key, back, flip) {
+  const id = `${key}|${back}|${flip}`;
+  if (cache.has(id)) return cache.get(id);
+  const look = lookFor(key);
+  const grid = styled(back ? BACK : FRONT, look.style, back);
+  if (!back && look.tie) { for (let y = grid.length - 8; y <= grid.length - 5; y++) grid[y][6] = 'R'; grid[grid.length - 8][5] = 'C'; grid[grid.length - 8][7] = 'C'; }
+  if (!back && look.collar) { grid[grid.length - 8][5] = 'C'; grid[grid.length - 8][6] = 'C'; grid[grid.length - 8][7] = 'C'; grid[grid.length - 7][6] = 'C'; }
+  const h = grid.length, w = grid[0].length;
+  const colors = {
+    H: look.hair, S: look.skin, m: '#b5564e', E: '#1d2230', T: look.shirt, t: null, P: look.pants, R: look.tie, C: '#ffffff',
+  };
+  const cv = document.createElement('canvas');
+  cv.width = (w + 2) * PX; cv.height = (h + 2) * PX;
+  const c = cv.getContext('2d');
+  const at = (x, y) => (grid[y] && grid[y][x] && grid[y][x] !== '.' ? grid[y][x] : null);
+  for (let y = -1; y <= h; y++) {
+    for (let x = -1; x <= w; x++) {
+      const ch = at(x, y);
+      let fill = null;
+      if (ch) fill = ch === 't' ? darker(look.shirt) : colors[ch];
+      else if (at(x - 1, y) || at(x + 1, y) || at(x, y - 1) || at(x, y + 1)) fill = OUTLINE;
+      if (!fill) continue;
+      const dx = flip ? w - 1 - x : x;
+      c.fillStyle = fill;
+      c.fillRect((dx + 1) * PX, (y + 1) * PX, PX, PX);
+    }
+  }
+  const out = { canvas: cv, w: cv.width, h: cv.height };
+  cache.set(id, out);
+  return out;
+}
+
+function darker(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  const c = (v) => Math.round(v * 0.82);
+  return `rgb(${c(n >> 16)}, ${c((n >> 8) & 255)}, ${c(n & 255)})`;
+}
+
+// Draws the sprite with its bottom-centre at (sx, sy). facing: 'SW' | 'SE' | 'NE' | 'NW'.
+export function drawAvatar(ctx, key, facing, sx, sy) {
+  const back = facing === 'NE' || facing === 'NW';
+  const flip = facing === 'SE' || facing === 'NW';
+  const s = sprite(key, back, flip);
+  ctx.drawImage(s.canvas, Math.round(sx - s.w / 2), Math.round(sy - s.h));
+  return s;
+}
