@@ -305,7 +305,7 @@ export function createUI({ store, reload, onChange }) {
     else if (d.act === 'approve') await run(() => api.approve(id), 'Entrega aprovada.');
     else if (d.act === 'retry') await run(() => api.retry(id));
     else if (d.act === 'cancel') await run(() => api.cancel(id), 'Tarefa cancelada.');
-    else if (d.act === 'copy') { await navigator.clipboard?.writeText(tasks[id].data.deliverable); toast('Entrega copiada.'); }
+    else if (d.act === 'copy') { try { await navigator.clipboard.writeText(tasks[id].data.deliverable); toast('Entrega copiada.'); } catch { toast('Não foi possível copiar aqui. Selecione o texto da entrega e copie.', true); } }
     else if (d.act === 'dismiss') {
       if (!panel.confirm) { panel.confirm = true; paint(true); return; }
       const a = agent(d.id);
@@ -347,7 +347,7 @@ export function createUI({ store, reload, onChange }) {
     $('inbox-count').hidden = !waiting; $('inbox-count').textContent = waiting;
     const banner = $('banner');
     banner.hidden = s.llm.configured;
-    if (!s.llm.configured) banner.innerHTML = 'Os agentes ainda não conseguem trabalhar: defina <code>ANTHROPIC_API_KEY</code> no ambiente do servidor e reinicie. Você já pode montar as áreas e contratar.';
+    if (!s.llm.configured) { if (s.llm.hint) banner.textContent = s.llm.hint; else banner.innerHTML = 'Os agentes ainda não conseguem trabalhar: defina <code>ANTHROPIC_API_KEY</code> no ambiente do servidor e reinicie. Você já pode montar as áreas e contratar.'; }
     if (panel?.view === 'task') { const sum = s.tasks.find((t) => t.id === panel.taskId); if (sum) loadTask(sum.id, sum.updated_at); }
     paint(false);
   }
