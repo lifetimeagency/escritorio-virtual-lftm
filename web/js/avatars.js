@@ -47,12 +47,12 @@ const BACK = [
 
 const SKIN = ['#f6d3b3', '#eebd94', '#d9a070', '#b47a4e', '#8a5a38'];
 const HAIR = ['#2b2320', '#4a3324', '#7a4a26', '#c08a3e', '#d9c08a', '#5b3a2e', '#a3402c'];
-const SHIRT = ['#4f7cff', '#2fa88a', '#e2725b', '#8b6fd6', '#f0b541', '#3aa0c9', '#d85c8a', '#5c6b82', '#ffffff', '#3f9b55'];
-const PANTS = ['#2f3a52', '#3d4350', '#5a4a3c', '#27324a'];
+const SHIRT = ['#0C4546', '#006864', '#118282', '#5fa9a7', '#9ccbc9', '#002740', '#283943', '#C2C3C9', '#ffffff', '#e9eef0'];
+const PANTS = ['#283943', '#3d4650', '#002740', '#4c545c'];
 
 const SPECIAL = {
-  boss: { skin: SKIN[1], hair: HAIR[0], shirt: '#1f2a44', pants: '#1a2338', style: 0, tie: '#d64545' },
-  cos: { skin: SKIN[2], hair: HAIR[1], shirt: '#3d4656', pants: '#2b3140', style: 1, tie: null, collar: true },
+  boss: { skin: SKIN[1], hair: HAIR[0], shirt: '#002740', pants: '#001c2e', style: 0, tie: '#118282' },
+  cos: { skin: SKIN[2], hair: HAIR[1], shirt: '#0C4546', pants: '#283943', style: 1, tie: null, collar: true },
 };
 
 function rand(seed) { // small deterministic generator

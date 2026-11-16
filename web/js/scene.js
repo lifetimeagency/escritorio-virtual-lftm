@@ -10,16 +10,22 @@ export const TABLES = [
   { id: 4, tx: 2, ty: 15 }, { id: 5, tx: 10, ty: 15 }, { id: 6, tx: 18, ty: 15 },
 ];
 
+// Lifetime brand palette (Manual de Identidade): greens lead, navy/slate/silver and white support.
+const B = { g900: '#0C4546', g700: '#006864', g500: '#118282', navy: '#002740', slate: '#283943', silver: '#C2C3C9' };
 const C = {
-  wall: '#f7f8fa', wallDim: '#eceff3', cap: '#ffffff',
-  floor: '#eadfce', plank: 'rgba(120, 90, 50, 0.09)',
-  boss: '#d9dfe8', bossRug: '#44547a', cos: '#e3e8ef', cosRug: '#b9c9d6',
-  copaA: '#f8f9fb', copaB: '#e6eaef', lazer: '#d3e8db', lazerRug: '#a9d1bb',
-  desk: '#fcfdfe', metal: '#c5ccd6', wood: '#d6b891', chair: '#eef1f5', chairBase: '#8f99a8',
-  white: '#ffffff', screenOff: '#2c3545', glass: 'rgba(160, 200, 235, 0.18)',
-  ink: '#1f2a44', accent: '#3b6cf6', ok: '#2fa36b', bad: '#d9534f',
+  wall: '#fbfbfc', wallDim: '#eff0f2', cap: '#ffffff',
+  floor: '#e3e5e9', plank: 'rgba(40, 57, 67, 0.06)',
+  boss: '#d6e3e2', bossRug: B.g900, cos: '#dfe3e7', cosRug: B.slate,
+  copaA: '#f9fafb', copaB: '#e6e8ec', lazer: '#d2e5e3', lazerRug: '#9cc9c6',
+  desk: '#fcfdfe', metal: B.silver, wood: B.slate, chair: '#eef0f3', chairBase: '#8d949c',
+  white: '#ffffff', screenOff: B.slate, glass: 'rgba(17, 130, 130, 0.13)', sky: '#d7e9e8',
+  ink: B.g900, accent: B.g500, ok: B.g500, bad: '#c0453f',
 };
-const SHADOW = 'rgba(40, 30, 10, 0.08)';
+export const assets = { logo: new Image() };
+assets.logo.src = new URL('../img/logo-white.png', import.meta.url).href;
+const LOGO_RATIO = 170 / 753;
+const HOT_FILL = 'rgba(17, 130, 130, 0.12)', HOT_LINE = 'rgba(0, 104, 100, 0.85)';
+const SHADOW = 'rgba(12, 40, 45, 0.09)';
 
 export function seatPos(areaId, seat) {
   const t = TABLES[areaId - 1];
@@ -69,7 +75,7 @@ function monitors(ctx, mx, my, z, axis, showScreen, lit, t) {
       if (axis === 'x') {
         box(ctx, mx + o, my - 0.035, z0, 0.46, 0.07, 13, C.white);
         if (showScreen) {
-          const on = lit ? ['#8fd0ff', '#b9e4ff', '#a6dbff'][(Math.floor(t / 420) + col + row * 2) % 3] : C.screenOff;
+          const on = lit ? ['#9fd6d3', '#c7ebe9', '#b3e1de'][(Math.floor(t / 420) + col + row * 2) % 3] : C.screenOff;
           wallY(ctx, mx + o + 0.035, mx + o + 0.425, my + 0.036, z0 + 1.6, z0 + 11.4, on);
           if (lit) for (let i = 0; i < 3; i++) wallY(ctx, mx + o + 0.07, mx + o + 0.2 + ((i * 7 + col * 3) % 5) * 0.04, my + 0.037, z0 + 3 + i * 3, z0 + 4 + i * 3, 'rgba(255,255,255,0.75)');
         } else {
@@ -115,9 +121,9 @@ function execDesk(ctx, x0, y0, panel, lit, t, papers) {
 }
 
 function plant(ctx, x, y, s = 1) {
-  box(ctx, x - 0.2, y - 0.2, 0, 0.4, 0.4, 13, '#f3f1ec');
+  box(ctx, x - 0.2, y - 0.2, 0, 0.4, 0.4, 13, '#f4f5f6');
   const [sx, sy] = iso(x, y, 13);
-  const leaves = [[0, -8, 11, '#3f9459'], [-9, -15, 9, '#4fa66a'], [9, -16, 9, '#4fa66a'], [0, -24, 10, '#5cb779'], [-5, -32, 7, '#4fa66a'], [6, -33, 6, '#6bc487']];
+  const leaves = [[0, -8, 11, B.g900], [-9, -15, 9, B.g700], [9, -16, 9, B.g700], [0, -24, 10, B.g500], [-5, -32, 7, B.g700], [6, -33, 6, '#3fa3a0']];
   for (const [dx, dy, r, col] of leaves) { ctx.beginPath(); ctx.ellipse(sx + dx * s, sy + dy * s, r * s, r * s * 0.9, 0, 0, Math.PI * 2); ctx.fillStyle = col; ctx.fill(); }
 }
 
@@ -143,6 +149,26 @@ function glassX(ctx, x, j) {
   wallX(ctx, x, j, j + 1, 0, 2, '#d5dbe3');
 }
 function post(ctx, x, y) { box(ctx, x - 0.04, y - 0.04, 0, 0.08, 0.08, 60, '#e9edf2', { stroke: 'rgba(38,50,72,0.12)' }); }
+
+// The white logo on dark brand surfaces, projected onto a wall or the floor. w is in tiles.
+function logoWith(ctx, a, b, c, d, origin, wPx, hPx) {
+  const img = assets.logo;
+  if (!img.complete || !img.naturalWidth) return;
+  ctx.save();
+  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+  ctx.transform(a, b, c, d, origin[0], origin[1]);
+  ctx.drawImage(img, 0, 0, wPx, hPx);
+  ctx.restore();
+}
+function logoOnWallY(ctx, x0, y, w, zTop) { // wall facing +y, reads along +x
+  logoWith(ctx, 32, 16, 0, 1, iso(x0, y, zTop), w, w * 36 * LOGO_RATIO);
+}
+function logoOnWallX(ctx, x, yStart, w, zTop) { // wall facing +x, reads from yStart towards smaller y
+  logoWith(ctx, 32, -16, 0, 1, iso(x, yStart, zTop), w, w * 36 * LOGO_RATIO);
+}
+function logoOnFloor(ctx, x0, y0, w) { // on the floor, reads along +x
+  logoWith(ctx, 32, 16, -32, 16, iso(x0, y0), w, w * LOGO_RATIO);
+}
 
 // ---------------------------------------------------------------- static shell
 function shell(ctx) {
@@ -173,26 +199,30 @@ function shell(ctx) {
   quad(ctx, 1.35, 1.15, 3.3, 3.5, null, 'rgba(255,255,255,0.35)');
   quad(ctx, 7.2, 1.0, 3.6, 3.8, C.cosRug);
   quad(ctx, 18.5, 1.3, 3.6, 1.5, C.lazerRug);
+  quad(ctx, 14.8, 6.45, 4.3, 1.2, B.g900);
+  logoOnFloor(ctx, 15.2, 6.65, 3.5);
   for (const tb of TABLES) quad(ctx, tb.tx + 1.15, tb.ty + 0.2, 4, 2, SHADOW);
   quad(ctx, 1.95, 2.35, 2.5, 1.1, SHADOW); quad(ctx, 7.95, 2.35, 2.5, 1.1, SHADOW);
   quad(ctx, 19.15, 3.55, 2.6, 1.4, SHADOW);
 
   // windows on the left wall, picture and quality board on the back wall
-  for (const y0 of [7.4, 11.4, 15.4]) {
-    wallX(ctx, 0.01, y0, y0 + 3.2, 30, 82, '#cfe7f8', 'rgba(255,255,255,0.9)');
+  for (const y0 of [7.4, 15.4]) {
+    wallX(ctx, 0.01, y0, y0 + 3.2, 30, 82, C.sky, 'rgba(255,255,255,0.9)');
     wallX(ctx, 0.01, y0 + 1.58, y0 + 1.62, 30, 82, '#ffffff');
     wallX(ctx, 0.01, y0, y0 + 3.2, 28, 30, '#ffffff', 'rgba(38,50,72,0.12)');
   }
-  wallX(ctx, 0.01, 1.4, 3.0, 44, 78, '#ffffff', 'rgba(38,50,72,0.2)');
-  wallX(ctx, 0.02, 1.55, 2.85, 47, 75, '#dfe7f5');
-  wallX(ctx, 0.03, 1.7, 2.3, 50, 62, '#44547a'); wallX(ctx, 0.03, 2.1, 2.7, 56, 70, '#d6b891');
-  wallY(ctx, 13.0, 15.6, 0.01, 46, 84, '#cfe7f8', 'rgba(255,255,255,0.9)');
+  // brand walls: reception panel on the left wall, panel behind the Big Boss
+  wallX(ctx, 0.01, 10.9, 15.1, 14, 90, B.g900);
+  logoOnWallX(ctx, 0.02, 14.7, 3.4, 68);
+  wallY(ctx, 1.1, 4.9, 0.01, 26, 82, B.g900);
+  logoOnWallY(ctx, 1.55, 0.02, 2.9, 70);
+  wallY(ctx, 13.0, 15.6, 0.01, 46, 84, C.sky, 'rgba(255,255,255,0.9)');
   wallY(ctx, 14.28, 14.32, 0.01, 46, 84, '#ffffff');
-  wallY(ctx, 19.2, 24.8, 0.01, 42, 84, '#cfe7f8', 'rgba(255,255,255,0.9)');
+  wallY(ctx, 19.2, 24.8, 0.01, 42, 84, C.sky, 'rgba(255,255,255,0.9)');
   wallY(ctx, 21.98, 22.02, 0.01, 42, 84, '#ffffff');
   // CoS quality board
   wallY(ctx, 9.9, 11.5, 0.01, 38, 84, '#ffffff', 'rgba(38,50,72,0.25)');
-  wallY(ctx, 9.9, 11.5, 0.02, 78, 84, C.accent);
+  wallY(ctx, 9.9, 11.5, 0.02, 78, 84, B.g700);
   for (let i = 0; i < 4; i++) {
     wallY(ctx, 10.05, 10.2, 0.02, 68 - i * 8, 73 - i * 8, C.ok);
     wallY(ctx, 10.3, 11.1 + (i % 2) * 0.25, 0.02, 69.5 - i * 8, 71.5 - i * 8, '#c9d0da');
@@ -207,7 +237,7 @@ function roundRect(ctx, x, y, w, h, r) {
 
 function pill(ctx, x, y, text, s, o = {}) {
   ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
-  ctx.font = '600 11px Inter, system-ui, sans-serif';
+  ctx.font = '600 11px Montserrat, system-ui, sans-serif';
   const w = ctx.measureText(text).width + 18, h = 20;
   ctx.shadowColor = 'rgba(20, 30, 60, 0.18)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 2;
   roundRect(ctx, -w / 2, -h / 2, w, h, 10); ctx.fillStyle = o.bg || 'rgba(255,255,255,0.96)'; ctx.fill();
@@ -221,7 +251,7 @@ function badge(ctx, x, y, n, color, s) {
   ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
   ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fillStyle = color; ctx.fill();
   ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
-  ctx.fillStyle = '#fff'; ctx.font = '700 11px Inter, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#fff'; ctx.font = '700 11px Montserrat, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText(String(n), 0, 1); ctx.restore();
 }
 
@@ -279,19 +309,19 @@ export function render(ctx, view, t) {
     const target = { type: 'room', room: r.room };
     const p = floorPoly(r.x, 0, 6, ROOM_D);
     hits.push({ poly: p, target });
-    if (hot(target)) poly(ctx, p, 'rgba(59, 108, 246, 0.10)', 'rgba(59, 108, 246, 0.55)');
+    if (hot(target)) poly(ctx, p, HOT_FILL, HOT_LINE);
   }
 
   // ---- Big Boss room
   add(BOSS.x + BOSS.y, (c) => seat(c, BOSS.x, BOSS.y, 'SW', 'boss'));
-  add(5.7, (c) => execDesk(c, 1.8, 2.2, C.wood, false, t));
+  add(5.7, (c) => execDesk(c, 1.8, 2.2, B.g900, false, t));
   add(6.5, (c) => seat(c, 2.4, 4.1, 'NE', null));
   add(7.7, (c) => seat(c, 3.6, 4.1, 'NE', null));
   add(4.7, (c) => {
     box(c, 0.12, 3.4, 0, 0.5, 2.0, 62, C.white);
     for (let i = 0; i < 3; i++) {
       wallX(c, 0.63, 3.5, 5.3, 6 + i * 19, 22 + i * 19, '#eef1f5');
-      const cols = ['#44547a', '#d6b891', '#3b6cf6', '#c5ccd6', '#2fa36b', '#e2725b'];
+      const cols = [B.g900, B.silver, B.g500, B.navy, B.g700, '#e9ecee'];
       for (let b = 0; b < 7; b++) wallX(c, 0.64, 3.6 + b * 0.2, 3.76 + b * 0.2, 6 + i * 19, 17 + i * 19 - (b % 3), cols[(b + i * 2) % cols.length]);
     }
   });
@@ -300,7 +330,7 @@ export function render(ctx, view, t) {
 
   // ---- CoS room
   add(COS.x + COS.y, (c) => seat(c, COS.x, COS.y, 'SW', 'cos'));
-  add(11.7, (c) => execDesk(c, 7.8, 2.2, '#dfe4ea', working.has('cos'), t, view.counts.cos));
+  add(11.7, (c) => execDesk(c, 7.8, 2.2, B.slate, working.has('cos'), t, view.counts.cos));
   add(13.1, (c) => seat(c, 9.0, 4.1, 'NE', null));
   add(7.4, (c) => {
     box(c, 6.3, 0.15, 0, 1.5, 0.6, 38, C.white);
@@ -319,7 +349,7 @@ export function render(ctx, view, t) {
     box(c, 12.5, 0.15, 0, 3.8, 0.8, 24, C.white);
     for (let i = 0; i < 4; i++) wallY(c, 12.56 + i * 0.95, 13.4 + i * 0.95, 0.96, 3, 21, '#f6f7f9', 'rgba(38,50,72,0.14)');
     box(c, 12.45, 0.1, 24, 3.9, 0.9, 3, C.wood);
-    box(c, 12.8, 0.3, 27, 0.46, 0.42, 17, '#2f343d'); wallY(c, 12.9, 13.16, 0.73, 30, 37, '#11151b'); wallY(c, 12.98, 13.08, 0.74, 40, 42, '#e2725b');
+    box(c, 12.8, 0.3, 27, 0.46, 0.42, 17, B.slate); wallY(c, 12.9, 13.16, 0.73, 30, 37, '#11151b'); wallY(c, 12.98, 13.08, 0.74, 40, 42, B.g500);
     box(c, 13.38, 0.5, 27, 0.1, 0.1, 4, C.white); box(c, 13.52, 0.58, 27, 0.1, 0.1, 4, C.white);
     box(c, 13.9, 0.28, 27, 0.72, 0.46, 12, '#e9ecf0'); wallY(c, 13.95, 14.42, 0.75, 29, 37, '#2c3545');
     quad(c, 15.0, 0.3, 0.8, 0.5, '#cfd6de', 'rgba(38,50,72,0.25)', 27.2); box(c, 15.36, 0.24, 27, 0.06, 0.06, 8, C.metal, { stroke: null });
@@ -330,10 +360,10 @@ export function render(ctx, view, t) {
   });
   add(17.0, (c) => stool(c, 15.0, 2.7));
   add(17.7, (c) => stool(c, 13.9, 3.8));
-  add(18.8, (c) => { box(c, 14.9, 3.7, 0, 0.2, 0.2, 26, C.metal, { stroke: null }); box(c, 14.2, 3.0, 26, 1.6, 1.6, 3, C.white); box(c, 14.85, 3.5, 29, 0.12, 0.12, 5, C.white); box(c, 15.2, 3.9, 29, 0.12, 0.12, 5, '#f0b541'); });
+  add(18.8, (c) => { box(c, 14.9, 3.7, 0, 0.2, 0.2, 26, C.metal, { stroke: null }); box(c, 14.2, 3.0, 26, 1.6, 1.6, 3, C.white); box(c, 14.85, 3.5, 29, 0.12, 0.12, 5, C.white); box(c, 15.2, 3.9, 29, 0.12, 0.12, 5, B.g500); });
   add(19.9, (c) => stool(c, 16.1, 3.8));
   add(20.0, (c) => stool(c, 15.0, 4.9));
-  add(17.3, (c) => { box(c, 12.35, 4.6, 0, 0.45, 0.45, 30, C.white); box(c, 12.42, 4.67, 30, 0.31, 0.31, 15, '#bfe3f7'); wallY(c, 12.5, 12.65, 5.06, 18, 22, C.accent); });
+  add(17.3, (c) => { box(c, 12.35, 4.6, 0, 0.45, 0.45, 30, C.white); box(c, 12.42, 4.67, 30, 0.31, 0.31, 15, '#cfe6e5'); wallY(c, 12.5, 12.65, 5.06, 18, 22, B.g500); });
   addPlant(17.4, 5.4, 0.9);
 
   // ---- Lazer
@@ -341,21 +371,21 @@ export function render(ctx, view, t) {
     box(c, 18.6, 0.15, 0, 3.2, 0.28, 27, '#c9d0da');
     box(c, 18.45, 0.15, 0, 0.2, 1.15, 19, '#c9d0da');
     box(c, 18.65, 0.4, 0, 3.1, 0.9, 11, '#d6dce4');
-    box(c, 18.8, 0.42, 11, 0.5, 0.2, 9, '#f0b541'); box(c, 20.9, 0.42, 11, 0.5, 0.2, 9, '#3b6cf6');
+    box(c, 18.8, 0.42, 11, 0.5, 0.2, 9, B.g500); box(c, 20.9, 0.42, 11, 0.5, 0.2, 9, B.navy);
     box(c, 21.75, 0.15, 0, 0.2, 1.15, 19, '#c9d0da');
   });
-  add(22.4, (c) => { box(c, 19.5, 1.8, 0, 1.4, 0.7, 8, C.white); box(c, 19.45, 1.75, 8, 1.5, 0.8, 2, C.wood); box(c, 19.8, 2.0, 10, 0.3, 0.22, 1.5, '#e2725b'); });
+  add(22.4, (c) => { box(c, 19.5, 1.8, 0, 1.4, 0.7, 8, C.white); box(c, 19.45, 1.75, 8, 1.5, 0.8, 2, C.wood); box(c, 19.8, 2.0, 10, 0.3, 0.22, 1.5, B.g500); });
   add(24.4, (c) => {
-    for (const [lx, ly] of [[19.1, 3.5], [21.4, 3.5], [19.1, 4.6], [21.4, 4.6]]) box(c, lx, ly, 0, 0.1, 0.1, 20, '#5c6b82', { stroke: null });
-    box(c, 19.0, 3.4, 20, 2.6, 1.4, 2, '#2f7fbf');
+    for (const [lx, ly] of [[19.1, 3.5], [21.4, 3.5], [19.1, 4.6], [21.4, 4.6]]) box(c, lx, ly, 0, 0.1, 0.1, 20, B.slate, { stroke: null });
+    box(c, 19.0, 3.4, 20, 2.6, 1.4, 2, B.g700);
     quad(c, 19.05, 3.45, 2.5, 1.3, null, 'rgba(255,255,255,0.85)', 22.1);
     const a = iso(19.05, 4.1, 22.1), b = iso(21.55, 4.1, 22.1);
     c.strokeStyle = 'rgba(255,255,255,0.85)'; c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke();
     wallX(c, 20.3, 3.38, 4.82, 22, 27, 'rgba(255,255,255,0.75)', 'rgba(38,50,72,0.3)');
-    box(c, 19.5, 3.7, 22, 0.24, 0.16, 1, '#e2725b', { stroke: null }); box(c, 21.0, 4.3, 22, 0.24, 0.16, 1, '#2c3545', { stroke: null });
+    box(c, 19.5, 3.7, 22, 0.24, 0.16, 1, '#ffffff', { stroke: null }); box(c, 21.0, 4.3, 22, 0.24, 0.16, 1, B.navy, { stroke: null });
   });
-  add(26.3, (c) => beanbag(c, 23.6, 2.7, '#f0b541'));
-  add(28.6, (c) => beanbag(c, 24.4, 4.2, '#5cb779'));
+  add(26.3, (c) => beanbag(c, 23.6, 2.7, B.g500));
+  add(28.6, (c) => beanbag(c, 24.4, 4.2, B.navy));
   addPlant(25.3, 0.7);
   addPlant(18.5, 5.4, 0.85);
 
@@ -374,7 +404,7 @@ export function render(ctx, view, t) {
     add(tb.tx + tb.ty + 4.5, (c) => teamTable(c, tb, working, bySeat, t));
     const slab = floorPoly(tb.tx + 1, tb.ty, 4, 2, 23);
     hits.push({ poly: slab, target: areaTarget });
-    if (hot(areaTarget)) overlay.push((c) => poly(c, slab, 'rgba(59, 108, 246, 0.10)', 'rgba(59, 108, 246, 0.8)'));
+    if (hot(areaTarget)) overlay.push((c) => poly(c, slab, HOT_FILL, HOT_LINE));
 
     for (let s = 0; s <= state.seats_per_area; s++) {
       const p = seatPos(tb.id, s);
@@ -388,7 +418,7 @@ export function render(ctx, view, t) {
       const [sx, sy] = iso(p.x, p.y, 14);
       if (s > 0 && hot(target)) {
         const ring = floorPoly(p.x - 0.42, p.y - 0.42, 0.84, 0.84);
-        overlay.push((c) => poly(c, ring, 'rgba(59, 108, 246, 0.14)', 'rgba(59, 108, 246, 0.8)'));
+        overlay.push((c) => poly(c, ring, HOT_FILL, HOT_LINE));
       }
       if (!agent && (s === 0 || defined)) overlay.push((c) => plus(c, sx, sy - 18, ls, hot(target)));
       if (agent && working.has(agent.id)) overlay.push((c) => bubble(c, sx + 16 * ls, sy - 46, t, ls));

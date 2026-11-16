@@ -1,7 +1,7 @@
 // Bootstrap: camera, pointer input, live refresh and the render loop.
 import { api } from './api.js';
 import { inPoly } from './iso.js';
-import { render, bounds, keyOf, seatPos, BOSS, COS } from './scene.js';
+import { render, bounds, keyOf, seatPos, assets, BOSS, COS } from './scene.js';
 import { createUI, AWAITING } from './ui.js';
 
 const canvas = document.getElementById('office');
@@ -66,9 +66,9 @@ function animateChanges(prev, next) {
     if (was === 'in_production' && now !== 'failed' && now !== 'cancelled') fly(next, head, 'cos');
     const afterReview = was === 'in_production' ? 900 : 0;
     if (was === 'in_production' || was === 'in_review') {
-      if (now === 'delivered') fly(next, 'cos', 'boss', '#2fa36b', afterReview);
-      else if (now === 'escalated') fly(next, 'cos', 'boss', '#d9534f', afterReview);
-      else if (now === 'in_production' && was === 'in_review') fly(next, 'cos', head, '#d9534f');
+      if (now === 'delivered') fly(next, 'cos', 'boss', '#118282', afterReview);
+      else if (now === 'escalated') fly(next, 'cos', 'boss', '#c0453f', afterReview);
+      else if (now === 'in_production' && was === 'in_review') fly(next, 'cos', head, '#c0453f');
     }
     if (AWAITING.includes(was) && now === 'in_production') fly(next, 'boss', head);
   }
@@ -155,6 +155,7 @@ document.getElementById('zoom-in').addEventListener('click', () => zoomAt(size.w
 document.getElementById('zoom-out').addEventListener('click', () => zoomAt(size.w / 2, size.h / 2, 0.8));
 document.getElementById('zoom-fit').addEventListener('click', fit);
 new ResizeObserver(resize).observe(canvas);
+assets.logo.addEventListener('load', () => { dirty = true; });
 
 // ---- render loop
 function frame(t) {

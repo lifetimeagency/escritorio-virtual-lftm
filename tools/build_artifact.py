@@ -12,7 +12,7 @@ css = (ROOT / "web" / "css" / "styles.css").read_text(encoding="utf-8")
 body = re.search(r"<body>(.*)</body>", html, re.S).group(1).strip()
 page = (
     "<title>Escritório Virtual LFTM</title>\n"
-    '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap">\n'
+    '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap">\n'
     f"<style>\n{css}</style>\n{body}\n"
 )
 out = ROOT / "dist" / "artifact"
