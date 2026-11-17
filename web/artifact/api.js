@@ -275,7 +275,7 @@ export const api = {
     await ready;
     const area = getArea(id), name = clean(body.name), headName = clean(body.head_name), dashboardUrl = clean(body.dashboard_url);
     if (!name || !headName) deny('Informe o nome da área e o nome do Head.');
-    if (dashboardUrl && !dashboardUrl.startsWith('https://')) deny('O link do dashboard precisa começar com https://.');
+    if (dashboardUrl && !(dashboardUrl.startsWith('https://') || /^[a-z0-9-]+\.html$/.test(dashboardUrl))) deny('O link do dashboard precisa começar com https:// ou ser uma página do escritório (nome.html).');
     if (areas().some((a) => a.id !== area.id && a.name.toLowerCase() === name.toLowerCase())) deny(`Já existe uma área chamada ${name}.`);
     await put('areas', area.id, { id: area.id, name, dashboard_url: dashboardUrl });
     const head = headOf(area.id) || { id: newId(), kind: 'head', area_id: area.id, seat: 0, look: Math.floor(Math.random() * 1e6), hired_at: now() };

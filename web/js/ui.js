@@ -228,7 +228,7 @@ export function createUI({ store, reload, onChange, openDashboard }) {
         ${field('Nome da área', 'name', a.name, '(ex.: Conteúdo, Social Media, Mídia Paga)')}
         ${field('Nome do Head', 'head_name', head?.name || '')}
         ${area_('Instruções do Head', 'head_instructions', head?.instructions || '', 6, 'Como ele conduz a área, o que prioriza, o que a área entrega…', '(opcional)')}
-        ${field('Link do dashboard da área', 'dashboard_url', a.dashboard_url || '', '(opcional, https://…)')}
+        ${field('Dashboard da área', 'dashboard_url', a.dashboard_url || '', '(opcional: link https://… ou página do escritório)')}
         <p class="note">Se a área já tem um dashboard próprio, cole o link: a tela da mesa passa a abri-lo.</p>
         <button class="btn primary block">${a.name ? 'Salvar' : 'Definir área e sentar o Head'}</button></form>`;
       if (!a.name) {

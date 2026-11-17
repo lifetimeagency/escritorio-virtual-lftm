@@ -6,6 +6,9 @@ import { createUI, AWAITING } from './ui.js';
 import { createDashboard } from './dashboard.js';
 import { createLife } from './life.js';
 
+// Pages embedded in the office (an area's own dashboard) use the office's runtime through this handle.
+if (window.claude) window.__officeClaude = window.claude;
+
 const canvas = document.getElementById('office');
 const ctx = canvas.getContext('2d');
 const tooltip = document.getElementById('tooltip');

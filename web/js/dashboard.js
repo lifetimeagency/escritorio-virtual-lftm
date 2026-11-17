@@ -31,7 +31,8 @@ function reachedBossAt(t) {
 
 export function createDashboard({ store, api, openTask }) {
   const root = $('dash'), body = $('dash-body'), tip = $('dash-tip');
-  let filter = { areaId: null, period: '30', stage: null };
+  let filter = { areaId: null, period: '30', stage: null, office: false };
+  let embed = null; // { src, root } — the area's own dashboard page, kept alive while the overlay is open
   let tasks = [];
   let stamp = '';
   let open = false;
@@ -167,7 +168,7 @@ export function createDashboard({ store, api, openTask }) {
       if (!filter.areaId) {
         const c = card('Tarefas por área', 'Clique em uma área para abrir o dashboard dela.');
         const rows = store.state.areas.filter((a) => a.name).map((a) => ({ key: a.id, label: a.name, value: list.filter((t) => t.area_id === a.id).length }));
-        c.append(bars(rows, { onPick: (id) => { filter = { ...filter, areaId: id, stage: null }; paint(); }, empty: 'Nenhuma tarefa delegada neste período.' }));
+        c.append(bars(rows, { onPick: (id) => { filter = { ...filter, areaId: id, stage: null, office: false }; paint(); }, empty: 'Nenhuma tarefa delegada neste período.' }));
         return c;
       }
       const c = card('Participação do time', 'Em quantas tarefas cada agente entregou uma parte.');
@@ -202,6 +203,26 @@ export function createDashboard({ store, api, openTask }) {
     },
   ];
 
+  // The area's dashboard page in a frame, with a bar to switch to the office's own numbers.
+  function buildEmbed(area) {
+    const root = el('div', 'dembed');
+    const bar = el('div', 'dembed-bar');
+    const note = el('span', 'dembed-note', `Dashboard de ${area.name}`);
+    const toOffice = el('button', 'btn', 'Indicadores do escritório');
+    toOffice.addEventListener('click', () => { filter.office = true; paint(); });
+    bar.append(note, toOffice);
+    const frame = el('iframe');
+    frame.title = `Dashboard de ${area.name}`;
+    frame.src = area.dashboard_url;
+    const fail = el('p', 'dempty', 'O painel não abriu aqui. Recarregue a página do escritório; se continuar, avise quem cuida do escritório.');
+    fail.hidden = true;
+    // Same-origin page: if its content never shows up, say so instead of leaving a blank frame.
+    const check = setTimeout(() => { try { if (!frame.contentDocument?.getElementById('view')) fail.hidden = false; } catch { fail.hidden = false; } }, 12000);
+    frame.addEventListener('load', () => { try { if (frame.contentDocument?.getElementById('view')) { clearTimeout(check); fail.hidden = true; } } catch { /* cross-origin: leave as is */ } });
+    root.append(bar, fail, frame);
+    return { src: area.dashboard_url, root };
+  }
+
   // ---- rendering
   function segmented(items, current, onPick) {
     const seg = el('div', 'dseg');
@@ -220,13 +241,28 @@ export function createDashboard({ store, api, openTask }) {
     const filters = el('div', 'dfilters');
     filters.append(
       segmented(PERIODS, filter.period, (p) => { filter.period = p; paint(); }),
-      segmented([[null, 'Agência'], ...areas.map((a) => [a.id, a.name])], filter.areaId, (id) => { filter = { ...filter, areaId: id, stage: null }; paint(); }),
+      segmented([[null, 'Agência'], ...areas.map((a) => [a.id, a.name])], filter.areaId, (id) => { filter = { ...filter, areaId: id, stage: null, office: false }; paint(); }),
     );
+    const own = filter.areaId && areas.find((a) => a.id === filter.areaId);
+    // An area whose dashboard is a page of the office itself: show that page, full size.
+    if (own && /^[a-z0-9-]+\.html$/.test(own.dashboard_url || '') && !filter.office) {
+      $('dash-body').classList.add('embed');
+      if (!embed || embed.src !== own.dashboard_url) embed = buildEmbed(own);
+      if (body.firstChild !== embed.root || body.childNodes.length !== 1) body.replaceChildren(embed.root);
+      return;
+    }
+    $('dash-body').classList.remove('embed');
     const list = scoped();
     // An area with its own dashboard (another app): link to it first; the office's numbers follow.
-    const own = filter.areaId && areas.find((a) => a.id === filter.areaId);
     let external = null;
-    if (own && /^https:\/\//.test(own.dashboard_url || '')) {
+    if (own && /^[a-z0-9-]+\.html$/.test(own.dashboard_url || '')) {
+      external = el('section', 'dlink');
+      const text = el('div');
+      text.append(el('h3', '', `Dashboard de ${own.name}`), el('p', '', 'Você está vendo os indicadores das tarefas no escritório.'));
+      const back = el('button', 'btn', 'Voltar ao dashboard da área');
+      back.addEventListener('click', () => { filter.office = false; paint(); });
+      external.append(text, back);
+    } else if (own && /^https:\/\//.test(own.dashboard_url || '')) {
       external = el('section', 'dlink');
       const text = el('div');
       text.append(el('h3', '', `Dashboard de ${own.name}`), el('p', '', 'Painel próprio da área, com os dados que o time mantém. Abre em uma nova aba; abaixo ficam os indicadores das tarefas no escritório.'));
@@ -243,7 +279,7 @@ export function createDashboard({ store, api, openTask }) {
   }
 
   async function refresh() {
-    if (!open) return;
+    if (!open || $('dash-body').classList.contains('embed')) return; // the area's own page refreshes itself
     const next = store.state.tasks.map((t) => t.id + t.updated_at).join('|') + store.state.areas.map((a) => a.name).join('|');
     if (next === stamp) return;
     stamp = next;
@@ -253,12 +289,12 @@ export function createDashboard({ store, api, openTask }) {
 
   function show(areaId) {
     const defined = store.state.areas.some((a) => a.id === areaId && a.name);
-    filter = { areaId: defined ? areaId : null, period: filter.period, stage: null };
+    filter = { areaId: defined ? areaId : null, period: filter.period, stage: null, office: false };
     open = true; stamp = ''; root.hidden = false;
     paint();
     refresh();
   }
-  function close() { open = false; root.hidden = true; hideTip(); }
+  function close() { open = false; root.hidden = true; hideTip(); embed = null; body.replaceChildren(); }
 
   $('dash-close').addEventListener('click', close);
   document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && open) close(); });

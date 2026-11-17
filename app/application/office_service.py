@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import random
+import re
 
 from app.domain.errors import DomainError
 from app.domain.models import (
@@ -28,8 +29,8 @@ class OfficeService:
         name, head_name, dashboard_url = name.strip(), head_name.strip(), dashboard_url.strip()
         if not name or not head_name:
             raise DomainError("Informe o nome da área e o nome do Head.")
-        if dashboard_url and not dashboard_url.startswith("https://"):
-            raise DomainError("O link do dashboard precisa começar com https://.")
+        if dashboard_url and not (dashboard_url.startswith("https://") or re.fullmatch(r"[a-z0-9-]+\.html", dashboard_url)):
+            raise DomainError("O link do dashboard precisa começar com https:// ou ser uma página do escritório (nome.html).")
         area = self._repo.get_area(area_id)
         duplicate = any(a.id != area_id and a.name.lower() == name.lower() for a in self._repo.list_areas())
         if duplicate:

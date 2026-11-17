@@ -556,7 +556,7 @@ export function render(ctx, view, t) {
 
     const dashTarget = { type: 'dash', areaId: tb.id };
     const dx = tb.tx + 8.0, mid = tb.ty + TABLE_D / 2;
-    add(dx + mid, (c) => dashScreen(c, tb, view.load[tb.id] || [0, 0, 0, 0, 0], /^https:\/\//.test(area.dashboard_url || '')));
+    add(dx + mid, (c) => dashScreen(c, tb, view.load[tb.id] || [0, 0, 0, 0, 0], !!area.dashboard_url));
     const screen = [iso(dx, tb.ty + 0.25, 64), iso(dx, tb.ty + TABLE_D - 0.25, 64), iso(dx, tb.ty + TABLE_D - 0.25, 28), iso(dx, tb.ty + 0.25, 28)];
     hits.push({ poly: screen, target: dashTarget });
     if (hot(dashTarget)) overlay.push((c) => poly(c, screen, 'rgba(255,255,255,0.14)', '#ffffff'));
