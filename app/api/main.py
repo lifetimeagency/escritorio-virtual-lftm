@@ -96,7 +96,7 @@ def create_app(repo: OfficeRepository, llm: LlmGateway, publisher: SocialPublish
 
     @app.put("/api/areas/{area_id}")
     def define_area(area_id: int, body: AreaIn):
-        return asdict(office.define_area(area_id, body.name, body.head_name, body.head_instructions))
+        return asdict(office.define_area(area_id, body.name, body.head_name, body.head_instructions, body.dashboard_url))
 
     @app.post("/api/agents", status_code=201)
     def hire(body: HireIn):

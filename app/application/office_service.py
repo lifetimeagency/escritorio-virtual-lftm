@@ -21,16 +21,21 @@ class OfficeService:
         self._repo = repo
 
     # ---- areas ---------------------------------------------------------
-    def define_area(self, area_id: int, name: str, head_name: str, head_instructions: str) -> Area:
+    def define_area(
+        self, area_id: int, name: str, head_name: str, head_instructions: str, dashboard_url: str = ""
+    ) -> Area:
         """Names the area and seats its Head at the end of the table (creates or updates)."""
-        name, head_name = name.strip(), head_name.strip()
+        name, head_name, dashboard_url = name.strip(), head_name.strip(), dashboard_url.strip()
         if not name or not head_name:
             raise DomainError("Informe o nome da área e o nome do Head.")
+        if dashboard_url and not dashboard_url.startswith("https://"):
+            raise DomainError("O link do dashboard precisa começar com https://.")
         area = self._repo.get_area(area_id)
         duplicate = any(a.id != area_id and a.name.lower() == name.lower() for a in self._repo.list_areas())
         if duplicate:
             raise DomainError(f"Já existe uma área chamada {name}.")
         area.name = name
+        area.dashboard_url = dashboard_url
         self._repo.save_area(area)
 
         head = self.head_of(area_id)

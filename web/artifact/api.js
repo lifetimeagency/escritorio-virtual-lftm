@@ -273,13 +273,14 @@ export const api = {
   },
   async defineArea(id, body) {
     await ready;
-    const area = getArea(id), name = clean(body.name), headName = clean(body.head_name);
+    const area = getArea(id), name = clean(body.name), headName = clean(body.head_name), dashboardUrl = clean(body.dashboard_url);
     if (!name || !headName) deny('Informe o nome da área e o nome do Head.');
+    if (dashboardUrl && !dashboardUrl.startsWith('https://')) deny('O link do dashboard precisa começar com https://.');
     if (areas().some((a) => a.id !== area.id && a.name.toLowerCase() === name.toLowerCase())) deny(`Já existe uma área chamada ${name}.`);
-    await put('areas', area.id, { id: area.id, name });
+    await put('areas', area.id, { id: area.id, name, dashboard_url: dashboardUrl });
     const head = headOf(area.id) || { id: newId(), kind: 'head', area_id: area.id, seat: 0, look: Math.floor(Math.random() * 1e6), hired_at: now() };
     await put('agents', head.id, { ...head, name: headName, role: `Head de ${name}`, instructions: clean(body.head_instructions) });
-    return { id: area.id, name };
+    return { id: area.id, name, dashboard_url: dashboardUrl };
   },
   async hire(body) {
     await ready;

@@ -11,7 +11,9 @@ from .fakes import FakeLlm
 def test_full_flow_over_http():
     app = create_app(SqliteOfficeRepository(":memory:"), FakeLlm([False, True]))
     with TestClient(app) as client:
-        assert client.put("/api/areas/1", json={"name": "Social", "head_name": "Ana"}).status_code == 200
+        assert client.put("/api/areas/1", json={"name": "Social", "head_name": "Ana", "dashboard_url": "http://x"}).status_code == 409
+        link = "https://claude.ai/artifact/exemplo"
+        assert client.put("/api/areas/1", json={"name": "Social", "head_name": "Ana", "dashboard_url": link}).json()["dashboard_url"] == link
         hired = client.post("/api/agents", json={"area_id": 1, "seat": 2, "name": "Bia", "role": "Redatora"})
         assert hired.status_code == 201
         assert client.post("/api/tasks", json={"title": "t", "briefing": "b", "area_id": 3}).status_code == 409

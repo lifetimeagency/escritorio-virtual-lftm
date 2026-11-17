@@ -223,11 +223,22 @@ export function createDashboard({ store, api, openTask }) {
       segmented([[null, 'Agência'], ...areas.map((a) => [a.id, a.name])], filter.areaId, (id) => { filter = { ...filter, areaId: id, stage: null }; paint(); }),
     );
     const list = scoped();
+    // An area with its own dashboard (another app): link to it first; the office's numbers follow.
+    const own = filter.areaId && areas.find((a) => a.id === filter.areaId);
+    let external = null;
+    if (own && /^https:\/\//.test(own.dashboard_url || '')) {
+      external = el('section', 'dlink');
+      const text = el('div');
+      text.append(el('h3', '', `Dashboard de ${own.name}`), el('p', '', 'Painel próprio da área, com os dados que o time mantém. Abre em uma nova aba; abaixo ficam os indicadores das tarefas no escritório.'));
+      const go = el('a', 'btn', 'Abrir dashboard ↗');
+      go.setAttribute('href', own.dashboard_url); go.setAttribute('target', '_blank'); go.setAttribute('rel', 'noopener noreferrer');
+      external.append(text, go);
+    }
     const grid = el('div', 'dgrid');
     const [summary, ...rest] = BLOCKS.map((block) => block(list));
     grid.append(...rest);
     const scroll = body.scrollTop;
-    body.replaceChildren(filters, summary, grid);
+    body.replaceChildren(...[filters, external, summary, grid].filter(Boolean));
     body.scrollTop = scroll;
   }
 

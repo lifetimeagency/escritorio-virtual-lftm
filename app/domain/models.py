@@ -30,6 +30,7 @@ class AgentKind(StrEnum):
 class Area:
     id: int
     name: str = ""
+    dashboard_url: str = ""  # the area's own dashboard (another app), opened from its desk screen
 
     @property
     def is_defined(self) -> bool:

@@ -7,6 +7,7 @@ class AreaIn(BaseModel):
     name: str = Field(max_length=60)
     head_name: str = Field(max_length=60)
     head_instructions: str = Field(default="", max_length=8000)
+    dashboard_url: str = Field(default="", max_length=500)
 
 
 class HireIn(BaseModel):

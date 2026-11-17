@@ -175,13 +175,21 @@ function execDesk(ctx, x0, y0, panel, lit, t, papers) {
 }
 
 // Wall screen at the end of each table: live mini chart of the area's tasks; opens the dashboard.
-function dashScreen(ctx, tb, levels) {
+function dashScreen(ctx, tb, levels, external) {
   const x = tb.tx + 8.0, y0 = tb.ty + 0.25, y1 = tb.ty + TABLE_D - 0.25, mid = tb.ty + TABLE_D / 2;
   box(ctx, x - 0.2, mid - 0.3, 0, 0.4, 0.6, 2, C.chairBase, { stroke: null });
   box(ctx, x - 0.05, mid - 0.05, 2, 0.1, 0.1, 30, C.metal, { stroke: null });
   box(ctx, x - 0.04, y0, 28, 0.08, y1 - y0, 36, C.white);
   wallX(ctx, x + 0.045, y0 + 0.06, y1 - 0.06, 30, 62, B.g900);
   wallX(ctx, x + 0.05, y1 - 0.75, y1 - 0.16, 56, 58, 'rgba(255,255,255,0.85)');
+  if (external) { // the area's own dashboard: a feed of posts on the screen
+    const cols = 4, w = (y1 - y0 - 0.5) / cols;
+    for (let c = 0; c < cols; c++) for (let r = 0; r < 2; r++) {
+      const ya = y1 - 0.2 - (c + 1) * w + 0.04, yb = y1 - 0.2 - c * w - 0.04;
+      wallX(ctx, x + 0.05, ya, yb, 33 + r * 10.5, 42 + r * 10.5, [B.g500, '#7fc0bd', '#ffffff', B.g700][(c + r * 3) % 4]);
+    }
+    return;
+  }
   const step = (y1 - y0 - 0.32) / levels.length;
   levels.forEach((v, i) => { // reads left to right on screen, which is from y1 towards y0
     const ya = y1 - 0.16 - (i + 1) * step + 0.05, yb = y1 - 0.16 - i * step - 0.05;
@@ -548,7 +556,7 @@ export function render(ctx, view, t) {
 
     const dashTarget = { type: 'dash', areaId: tb.id };
     const dx = tb.tx + 8.0, mid = tb.ty + TABLE_D / 2;
-    add(dx + mid, (c) => dashScreen(c, tb, view.load[tb.id] || [0, 0, 0, 0, 0]));
+    add(dx + mid, (c) => dashScreen(c, tb, view.load[tb.id] || [0, 0, 0, 0, 0], /^https:\/\//.test(area.dashboard_url || '')));
     const screen = [iso(dx, tb.ty + 0.25, 64), iso(dx, tb.ty + TABLE_D - 0.25, 64), iso(dx, tb.ty + TABLE_D - 0.25, 28), iso(dx, tb.ty + 0.25, 28)];
     hits.push({ poly: screen, target: dashTarget });
     if (hot(dashTarget)) overlay.push((c) => poly(c, screen, 'rgba(255,255,255,0.14)', '#ffffff'));

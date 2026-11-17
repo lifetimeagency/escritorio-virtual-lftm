@@ -125,6 +125,7 @@ export function createUI({ store, reload, onChange, openDashboard }) {
     return `<div class="who"><div class="av" data-look="${a.look}"></div><div><b>${esc(a.name)}</b><span>${esc(a.role)}</span></div></div>`;
   }
 
+  const externalDash = (a) => /^https:\/\//.test(a?.dashboard_url || '');
   const pubChip = (p) => `<span class="chip ${PUB_STATUS[p.status][1]}">${PUB_STATUS[p.status][0]}</span>`;
   const pubItem = (p, sub) => `<button class="item" data-act="pub" data-id="${p.id}"><div class="t"><span>${CHANNELS[p.channel]} · ${esc(when(p.scheduled_at))}</span>${pubChip(p)}</div><div class="s">${esc(sub ?? p.task_title)}</div></button>`;
   const noAccounts = () => !(st().social?.connected || []).length;
@@ -227,6 +228,8 @@ export function createUI({ store, reload, onChange, openDashboard }) {
         ${field('Nome da área', 'name', a.name, '(ex.: Conteúdo, Social Media, Mídia Paga)')}
         ${field('Nome do Head', 'head_name', head?.name || '')}
         ${area_('Instruções do Head', 'head_instructions', head?.instructions || '', 6, 'Como ele conduz a área, o que prioriza, o que a área entrega…', '(opcional)')}
+        ${field('Link do dashboard da área', 'dashboard_url', a.dashboard_url || '', '(opcional, https://…)')}
+        <p class="note">Se a área já tem um dashboard próprio, cole o link: a tela da mesa passa a abri-lo.</p>
         <button class="btn primary block">${a.name ? 'Salvar' : 'Definir área e sentar o Head'}</button></form>`;
       if (!a.name) {
         return { title: `Mesa ${a.id}`, sub: 'Área ainda não definida', html: `<p class="lead">Dê um nome à área e defina o Head que senta na ponta da mesa. É ele quem recebe as suas tarefas, coordena o time e fala com o CoS.</p>${form}` };
@@ -238,7 +241,9 @@ export function createUI({ store, reload, onChange, openDashboard }) {
       const html = `${who(head)}
         <div class="row-actions"><button class="btn primary" data-act="delegate-to" data-id="${a.id}">Delegar tarefa</button>
         <button class="btn" data-act="hire-at" data-area="${a.id}" data-seat="${free[0] || ''}" ${free.length ? '' : 'disabled'}>Contratar agente</button></div>
-        <div class="row-actions" style="margin-top:8px"><button class="btn" data-act="dash" data-id="${a.id}">Abrir dashboard da área</button></div>
+        <div class="row-actions" style="margin-top:8px">${externalDash(a)
+          ? `<a class="btn" href="${esc(a.dashboard_url)}" target="_blank" rel="noopener noreferrer">Abrir dashboard da área ↗</a><button class="btn" data-act="dash" data-id="${a.id}">Indicadores no escritório</button>`
+          : `<button class="btn" data-act="dash" data-id="${a.id}">Abrir dashboard da área</button>`}</div>
         <h3>Time (${team.length}/${st().seats_per_area})</h3>
         ${team.length ? `<div class="list">${team.map((m) => `<button class="item" data-act="agent" data-id="${m.id}"><div class="t"><span>${esc(m.name)}</span>${store.working.has(m.id) ? '<span class="chip prod">Trabalhando</span>' : ''}</div><div class="s">${esc(m.role)}</div></button>`).join('')}</div>` : '<div class="empty">Sem agentes ainda. O Head produz sozinho até você contratar o time.</div>'}
         <h3>Tarefas da área</h3>${taskList(mine, 'Nenhuma tarefa para esta área.')}
