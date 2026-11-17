@@ -1,8 +1,9 @@
-// Pixel-art seated avatars, generated from small character maps and cached as sprites.
+// Pixel-art avatars (seated, standing and walking), generated from small character maps and cached as sprites.
 const PX = 2; // screen pixels per sprite pixel
 const OUTLINE = '#262d3d';
 
-const FRONT = [
+// Body parts. Rows are pixels; H hair, S skin, E eyes, m mouth, T shirt, t shirt shade, P pants, K shoes.
+const HEAD_FRONT = [
   '...HHHHHHH...',
   '..HHHHHHHHH..',
   '.HHHHHHHHHHH.',
@@ -14,16 +15,8 @@ const FRONT = [
   '..SSSSSSSSS..',
   '..SSSmmSSSS..',
   '...SSSSSSS...',
-  '....TTTTT....',
-  '..TTTTTTTTT..',
-  '.TTTTTTTTTTT.',
-  '.TTtTTTTTtTT.',
-  '.TTtTTTTTtTT.',
-  '.SStTTTTTtSS.',
-  '...PPPPPPP...',
-  '...PPPPPPP...',
 ];
-const BACK = [
+const HEAD_BACK = [
   '...HHHHHHH...',
   '..HHHHHHHHH..',
   '.HHHHHHHHHHH.',
@@ -35,6 +28,18 @@ const BACK = [
   '..HHHHHHHHH..',
   '..SHHHHHHHS..',
   '...SSSSSSS...',
+];
+const SEATED_FRONT = [
+  '....TTTTT....',
+  '..TTTTTTTTT..',
+  '.TTTTTTTTTTT.',
+  '.TTtTTTTTtTT.',
+  '.TTtTTTTTtTT.',
+  '.SStTTTTTtSS.',
+  '...PPPPPPP...',
+  '...PPPPPPP...',
+];
+const SEATED_BACK = [
   '....TTTTT....',
   '..TTTTTTTTT..',
   '.TTTTTTTTTTT.',
@@ -44,6 +49,24 @@ const BACK = [
   '...TTTTTTT...',
   '...TTTTTTT...',
 ];
+const STANDING = [ // arms down, hands at the sides
+  '....TTTTT....',
+  '..TTTTTTTTT..',
+  '.TTTTTTTTTTT.',
+  '.TtTTTTTTTtT.',
+  '.TtTTTTTTTtT.',
+  '.TtTTTTTTTtT.',
+  '.S.TTTTTTT.S.',
+];
+const LEGS = {
+  stand: ['...PPPPPPP...', '...PPP.PPP...', '...PPP.PPP...', '...PP...PP...', '...KK...KK...'],
+  stride: ['...PPPPPPP...', '...PPP.PPP...', '..PPP...PPP..', '..PP.....PP..', '..KK.....KK..'],
+};
+const POSES = {
+  sit: (back) => [...(back ? HEAD_BACK : HEAD_FRONT), ...(back ? SEATED_BACK : SEATED_FRONT)],
+  stand: (back) => [...(back ? HEAD_BACK : HEAD_FRONT), ...STANDING, ...LEGS.stand],
+  stride: (back) => [...(back ? HEAD_BACK : HEAD_FRONT), ...STANDING, ...LEGS.stride],
+};
 
 const SKIN = ['#f6d3b3', '#eebd94', '#d9a070', '#b47a4e', '#8a5a38'];
 const HAIR = ['#2b2320', '#4a3324', '#7a4a26', '#c08a3e', '#d9c08a', '#5b3a2e', '#a3402c'];
@@ -83,16 +106,18 @@ function styled(rows, style, back) {
 
 const cache = new Map();
 
-export function sprite(key, back, flip) {
-  const id = `${key}|${back}|${flip}`;
+// pose: 'sit' | 'stand' | 'stride' (the second walking frame)
+export function sprite(key, back, flip, pose = 'sit') {
+  const id = `${key}|${back}|${flip}|${pose}`;
   if (cache.has(id)) return cache.get(id);
   const look = lookFor(key);
-  const grid = styled(back ? BACK : FRONT, look.style, back);
-  if (!back && look.tie) { for (let y = grid.length - 8; y <= grid.length - 5; y++) grid[y][6] = 'R'; grid[grid.length - 8][5] = 'C'; grid[grid.length - 8][7] = 'C'; }
-  if (!back && look.collar) { grid[grid.length - 8][5] = 'C'; grid[grid.length - 8][6] = 'C'; grid[grid.length - 8][7] = 'C'; grid[grid.length - 7][6] = 'C'; }
+  const grid = styled((POSES[pose] || POSES.sit)(back), look.style, back);
+  const top = grid.findIndex((r) => r.includes('T')); // first shirt row
+  if (!back && look.tie) { for (let y = top; y <= top + 3; y++) grid[y][6] = 'R'; grid[top][5] = 'C'; grid[top][7] = 'C'; }
+  if (!back && look.collar) { grid[top][5] = 'C'; grid[top][6] = 'C'; grid[top][7] = 'C'; grid[top + 1][6] = 'C'; }
   const h = grid.length, w = grid[0].length;
   const colors = {
-    H: look.hair, S: look.skin, m: '#b5564e', E: '#1d2230', T: look.shirt, t: null, P: look.pants, R: look.tie, C: '#ffffff',
+    H: look.hair, S: look.skin, m: '#b5564e', E: '#1d2230', T: look.shirt, t: null, P: look.pants, R: look.tie, C: '#ffffff', K: '#23272e',
   };
   const cv = document.createElement('canvas');
   cv.width = (w + 2) * PX; cv.height = (h + 2) * PX;
@@ -122,10 +147,10 @@ function darker(hex) {
 }
 
 // Draws the sprite with its bottom-centre at (sx, sy). facing: 'SW' | 'SE' | 'NE' | 'NW'.
-export function drawAvatar(ctx, key, facing, sx, sy) {
+export function drawAvatar(ctx, key, facing, sx, sy, pose = 'sit') {
   const back = facing === 'NE' || facing === 'NW';
   const flip = facing === 'SE' || facing === 'NW';
-  const s = sprite(key, back, flip);
+  const s = sprite(key, back, flip, pose);
   ctx.drawImage(s.canvas, Math.round(sx - s.w / 2), Math.round(sy - s.h));
   return s;
 }

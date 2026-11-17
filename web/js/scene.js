@@ -43,6 +43,49 @@ export function seatPos(areaId, seat) {
   return { x: seatX(t, seat - 3), y: t.ty + TABLE_D + 0.5, facing: 'NE' };
 }
 
+// ---------------------------------------------------------------- where agents walk and hang out
+// Walkways of the open office: agents move along these lines between desks, copa, lounge and courts.
+export const WALK_H = [8.0, 14.6, 20.9];
+export const WALK_V = [1.4, 11.0, 21.2, 31.0];
+const DOORS = [4, 6]; // gaps in the court's left glass wall, one per half
+
+// From the chair to the nearest walkway.
+export function seatExit(areaId, seat) {
+  const p = seatPos(areaId, seat), row = areaId <= 3 ? 0 : 1, col = (areaId - 1) % 3;
+  if (seat === 0) return [[p.x, p.y], [WALK_V[col], p.y]];
+  return [[p.x, p.y], [p.x, WALK_H[seat <= 3 ? row : row + 1]]];
+}
+
+// Spots for idle agents. approach: points from a walkway to the spot. z: height of the avatar's base.
+// k: explicit draw order where the spot sits on a long piece of furniture.
+const copa = { kind: 'copa', label: 'na copa', going: 'indo para a copa' };
+const lounge = { kind: 'lounge', label: 'no lazer', going: 'indo para o lazer' };
+const pingpong = { kind: 'pingpong', label: 'jogando pingue-pongue', going: 'indo jogar pingue-pongue', pose: 'play', z: 0 };
+const padel = { kind: 'padel', label: 'jogando padel', going: 'indo jogar padel', pose: 'play', z: 0 };
+export const SPOTS = [
+  { ...copa, id: 'coffee', label: 'tomando café', x: 15.0, y: 1.35, z: 0, facing: 'NE', pose: 'stand', approach: [[15.3, 8], [15.3, 1.35]] },
+  { ...copa, id: 'water', label: 'tomando água', x: 15.15, y: 4.85, z: 0, facing: 'NW', pose: 'stand', approach: [[15.15, 8]] },
+  { ...copa, id: 'fridge', x: 19.2, y: 1.55, z: 0, facing: 'NE', pose: 'stand', approach: [[19.2, 8]] },
+  { ...copa, id: 'stool-n', x: 17.0, y: 2.7, z: 17, facing: 'SW', pose: 'sit', approach: [[18.6, 8], [18.6, 2.7]] },
+  { ...copa, id: 'stool-w', x: 15.9, y: 3.8, z: 17, facing: 'SE', pose: 'sit', approach: [[15.9, 8]] },
+  { ...copa, id: 'stool-e', x: 18.1, y: 3.8, z: 17, facing: 'NW', pose: 'sit', approach: [[18.6, 8], [18.6, 3.8]] },
+  { ...copa, id: 'stool-s', x: 17.0, y: 4.9, z: 17, facing: 'NE', pose: 'sit', approach: [[17.0, 8]] },
+  { ...lounge, id: 'sofa-1', label: 'no sofá', x: 22.3, y: 0.95, z: 9, facing: 'SW', pose: 'sit', k: 23.85, approach: [[22.3, 8]] },
+  { ...lounge, id: 'sofa-2', label: 'no sofá', x: 23.3, y: 0.95, z: 9, facing: 'SW', pose: 'sit', k: 23.86, approach: [[24.2, 8], [24.2, 1.5], [23.3, 1.5]] },
+  { ...lounge, id: 'sofa-3', label: 'no sofá', x: 24.2, y: 0.95, z: 9, facing: 'SW', pose: 'sit', k: 23.87, approach: [[24.2, 8]] },
+  { ...lounge, id: 'bag-1', label: 'no puff', x: 29.6, y: 2.3, z: 5, facing: 'SW', pose: 'sit', k: 31.95, approach: [[29.6, 8]] },
+  { ...lounge, id: 'bag-2', label: 'no puff', x: 30.4, y: 3.9, z: 5, facing: 'SW', pose: 'sit', k: 34.35, approach: [[30.4, 8]] },
+  { ...lounge, id: 'bench-1', x: 33.95, y: 0.8, z: 7, facing: 'SW', pose: 'sit', k: 36.05, approach: [[31.0, 8], [31.0, 2.0], [33.95, 2.0]] },
+  { ...lounge, id: 'bench-2', x: 35.15, y: 0.8, z: 7, facing: 'SW', pose: 'sit', k: 36.06, approach: [[31.0, 8], [31.0, 2.0], [35.15, 2.0]] },
+  { ...lounge, id: 'bench-3', x: 36.35, y: 0.8, z: 7, facing: 'SW', pose: 'sit', k: 36.07, approach: [[31.0, 8], [31.0, 2.0], [36.35, 2.0]] },
+  { ...pingpong, id: 'pp-1', side: 0, x: 25.4, y: 4.1, facing: 'SE', approach: [[25.4, 8]] },
+  { ...pingpong, id: 'pp-2', side: 1, x: 29.2, y: 4.1, facing: 'NW', approach: [[29.2, 8]] },
+  { ...padel, id: 'padel-1', side: 0, x: 33.7, y: 11.0, facing: 'SW', approach: [[31.0, 12.9], [33.0, 12.9]] },
+  { ...padel, id: 'padel-2', side: 0, x: 36.1, y: 11.0, facing: 'SW', approach: [[31.0, 12.9], [33.0, 12.9], [36.1, 12.9]] },
+  { ...padel, id: 'padel-3', side: 1, x: 33.7, y: 16.8, facing: 'NE', approach: [[31.0, 14.9], [33.0, 14.9]] },
+  { ...padel, id: 'padel-4', side: 1, x: 36.1, y: 16.8, facing: 'NE', approach: [[31.0, 14.9], [33.0, 14.9], [36.1, 14.9]] },
+];
+
 export function bounds() {
   return { minX: -D * 32 - 20, maxX: W * 32 + 20, minY: -WALL_HIGH - 44, maxY: (W + D) * 16 + 20 };
 }
@@ -212,7 +255,11 @@ function courtGlass(ctx, near) {
   if (!near) { // the far side is drawn first, then the net
     for (let i = 0; i < w; i++) { wallY(ctx, x + i, x + i + 1, endY, 0, 46, glass, frame); wallY(ctx, x + i, x + i + 1, endY, 46, 58, 'rgba(40,57,67,0.07)', frame); }
   }
-  for (let j = 0; j < l; j++) { const h = courtWallH(j); wallX(ctx, sideX, y + j, y + j + 1, 0, h, glass, frame); postAt(sideX, y + j, Math.max(h, courtWallH(j - 1))); }
+  for (let j = 0; j < l; j++) {
+    const h = courtWallH(j);
+    if (near || !DOORS.includes(j)) wallX(ctx, sideX, y + j, y + j + 1, 0, h, glass, frame);
+    postAt(sideX, y + j, Math.max(h, courtWallH(j - 1)));
+  }
   postAt(sideX, y + l, 46);
   if (near) {
     for (let i = 0; i < w; i++) { wallY(ctx, x + i, x + i + 1, endY, 0, 46, glass, frame); wallY(ctx, x + i, x + i + 1, endY, 46, 58, 'rgba(40,57,67,0.07)', frame); }
@@ -385,7 +432,8 @@ function mezzanine(ctx, view, t, hits, hot) {
 }
 
 /**
- * view: { state, working:Set<agentId>, hover, selected, zoom, flights, counts:{boss, cos}, load:{[areaId]: number[5]} }
+ * view: { state, working:Set<agentId>, hover, selected, zoom, flights, counts:{boss, cos}, load:{[areaId]: number[5]},
+ *         life:{ actors: Map<agentId, actor>, balls: [{x, y, z, ground, color}] } }
  * Returns the hit regions (later entries are on top).
  */
 export function render(ctx, view, t) {
@@ -462,7 +510,7 @@ export function render(ctx, view, t) {
   addPlant(37.3, 21.2); addPlant(32.0, 21.2);
 
   // ---- open office plants
-  addPlant(0.7, 7.2); addPlant(0.7, 21.2); addPlant(30.7, 21.2); addPlant(30.7, 7.2);
+  addPlant(0.7, 7.2); addPlant(0.7, 21.3); addPlant(30.3, 21.4); addPlant(30.3, 7.0);
 
   // ---- team tables, seats, people and dashboards
   const areaById = Object.fromEntries(state.areas.map((a) => [a.id, a]));
@@ -481,8 +529,9 @@ export function render(ctx, view, t) {
     for (let s = 0; s <= state.seats_per_area; s++) {
       const p = seatPos(tb.id, s);
       const agent = bySeat[s];
+      const atDesk = !!agent && (view.life?.actors.get(agent.id)?.mode ?? 'desk') === 'desk';
       // far-side seats are always behind the table and near-side ones in front of it
-      add(p.x + p.y + (s === 0 ? 0 : s <= 3 ? -0.3 : 0.3), (c) => seat(c, p.x, p.y, p.facing, agent ? agent.look : null));
+      add(p.x + p.y + (s === 0 ? 0 : s <= 3 ? -0.3 : 0.3), (c) => seat(c, p.x, p.y, p.facing, atDesk ? agent.look : null));
       let target;
       if (s === 0) target = areaTarget;
       else if (agent) target = { type: 'agent', agentId: agent.id };
@@ -494,7 +543,7 @@ export function render(ctx, view, t) {
         overlay.push((c) => poly(c, ring, HOT_FILL, HOT_LINE));
       }
       if (!agent && (s === 0 || defined)) overlay.push((c) => plus(c, sx, sy - 18, ls, hot(target)));
-      if (agent && working.has(agent.id)) overlay.push((c) => bubble(c, sx + 16 * ls, sy - 46, t, ls));
+      if (atDesk && working.has(agent.id)) overlay.push((c) => bubble(c, sx + 16 * ls, sy - 46, t, ls));
     }
 
     const dashTarget = { type: 'dash', areaId: tb.id };
@@ -509,8 +558,29 @@ export function render(ctx, view, t) {
     overlay.push((c) => pill(c, hp[0], hp[1], defined ? name : `Mesa ${tb.id} · livre`, ls, defined ? { bg: C.ink, fg: '#fff' } : { dashed: true, fg: '#5c6b82' }));
   }
 
+  // ---- agents away from their desks
+  for (const a of view.life?.actors.values() || []) {
+    if (a.mode === 'desk') continue;
+    const [sx, sy] = iso(a.x, a.y, a.z);
+    const k = a.mode === 'spot' && a.spot.k !== undefined ? a.spot.k : a.x + a.y + 0.05;
+    const pose = a.pose;
+    add(k, (c) => { if (a.z === 0) quad(c, a.x - 0.22, a.y - 0.22, 0.44, 0.44, SHADOW); drawAvatar(c, a.look, a.facing, sx, sy, pose); });
+    const target = { type: 'agent', agentId: a.id };
+    const top = pose === 'sit' ? 44 : 52;
+    hits.push({ poly: [[sx - 15, sy - top], [sx + 15, sy - top], [sx + 15, sy + 4], [sx - 15, sy + 4]], target });
+    if (hot(target)) overlay.push((c) => poly(c, floorPoly(a.x - 0.42, a.y - 0.42, 0.84, 0.84), HOT_FILL, HOT_LINE));
+    if (working.has(a.id)) overlay.push((c) => bubble(c, sx + 16 * ls, sy - top - 4, t, ls));
+  }
+
   items.sort((a, b) => a.k - b.k);
   for (const it of items) it.f(ctx);
+
+  for (const b of view.life?.balls || []) {
+    const [gx, gy] = iso(b.x, b.y, b.ground), [bx, by] = iso(b.x, b.y, b.z);
+    ctx.beginPath(); ctx.ellipse(gx, gy, 3, 1.5, 0, 0, Math.PI * 2); ctx.fillStyle = 'rgba(12, 40, 45, 0.25)'; ctx.fill();
+    ctx.beginPath(); ctx.arc(bx, by, 2.6, 0, Math.PI * 2); ctx.fillStyle = b.color; ctx.fill();
+    ctx.strokeStyle = 'rgba(38, 50, 72, 0.55)'; ctx.lineWidth = 0.8; ctx.stroke();
+  }
 
   // ---- overlay: labels, badges, bubbles, papers in transit
   for (const f of overlay) f(ctx);

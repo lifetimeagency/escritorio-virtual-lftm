@@ -23,7 +23,7 @@ const deny = (msg) => { throw new Error(msg); };
 const ABORT = Symbol('abort');
 
 // ---- store: live mirror of the artifact database (memory only when no database is available)
-const mem = { areas: new Map(), agents: new Map(), tasks: new Map(), config: new Map() };
+const mem = { areas: new Map(), agents: new Map(), tasks: new Map(), config: new Map(), publications: new Map() };
 let db = null, sample = null;
 
 function mirror(name) {
@@ -38,7 +38,7 @@ function mirror(name) {
 const ready = (async () => {
   const claude = window.claude;
   if (claude?.use) [db, sample] = await Promise.all([claude.use('db'), claude.use('sample')]);
-  if (db) await Promise.race([Promise.all(['areas', 'agents', 'tasks', 'config'].map(mirror)), new Promise((r) => setTimeout(r, 10000))]);
+  if (db) await Promise.race([Promise.all(['areas', 'agents', 'tasks', 'config', 'publications'].map(mirror)), new Promise((r) => setTimeout(r, 10000))]);
   // Tasks left mid-flight by a closed tab are picked up once, by whoever opens the office next.
   for (const t of mem.tasks.values()) if (AUTOMATED.includes(t.status)) spawn(t.id);
 })();
@@ -248,13 +248,28 @@ async function bossAction(id, change, rerun) {
   return t;
 }
 
+// ---- social publishing (same rules as app/domain/models.py, Publication)
+const CHANNELS = ['linkedin', 'instagram', 'facebook'];
+const savePub = (p) => put('publications', p.id, { ...p, updated_at: now() });
+async function pubAction(id, allowed, change) {
+  await ready;
+  const p = mem.publications.has(id) ? clone(mem.publications.get(id)) : deny('Publicação não encontrada.');
+  if (!allowed.includes(p.status)) deny('A publicação não permite essa ação no estado atual.');
+  change(p);
+  await savePub(p);
+  return p;
+}
+
 export const api = {
   async state() {
     await ready;
     const tasks = [...mem.tasks.values()].sort((a, b) => (a.created_at < b.created_at ? 1 : -1)).map(summary);
     const hint = !db ? 'Abra este artefato logado no claude.ai para salvar o escritório e colocar os agentes para trabalhar.'
       : 'O Claude não está disponível nesta visualização, então os agentes não conseguem trabalhar aqui.';
-    return { areas: areas(), agents: agents(), tasks, settings: settings(), seats_per_area: SEATS, llm: { configured: !!(db && sample), hint } };
+    // No social account can be connected from the Artifact: posts whose time has come wait for a person.
+    for (const p of mem.publications.values()) if (p.status === 'scheduled' && new Date(p.scheduled_at) <= new Date()) await savePub({ ...p, status: 'ready' }).catch(() => {});
+    const publications = [...mem.publications.values()].sort((a, b) => (a.scheduled_at < b.scheduled_at ? -1 : 1));
+    return { areas: areas(), agents: agents(), tasks, settings: settings(), publications, social: { connected: [] }, seats_per_area: SEATS, llm: { configured: !!(db && sample), hint } };
   },
   async defineArea(id, body) {
     await ready;
@@ -318,6 +333,20 @@ export const api = {
   },
   async task(id) { await ready; return getTask(id); },
   async tasks() { await ready; return [...mem.tasks.values()].map(clone); },
+  async schedulePublication(body) {
+    await ready;
+    const t = getTask(body.task_id), text = clean(body.text), when = new Date(body.scheduled_at);
+    if (t.status !== 'approved') deny('Só entregas aprovadas por você podem ser publicadas.');
+    if (!CHANNELS.includes(body.channel)) deny('Rede social inválida.');
+    if (!text) deny('Escreva o texto da publicação.');
+    if (Number.isNaN(when.getTime())) deny('Data e hora da publicação inválidas.');
+    const p = { id: newId(), task_id: t.id, task_title: t.title, area_id: t.area_id, channel: body.channel, text, scheduled_at: when.toISOString(), status: 'scheduled', url: '', error: '', published_at: '', created_at: now(), updated_at: now() };
+    await savePub(p);
+    return p;
+  },
+  markPublished: (id, url) => pubAction(id, ['scheduled', 'ready', 'failed'], (p) => { p.status = 'published'; p.url = clean(url); p.error = ''; p.published_at = now(); }),
+  retryPublication: (id) => pubAction(id, ['failed'], (p) => { p.status = 'scheduled'; p.error = ''; p.scheduled_at = now(); }),
+  cancelPublication: (id) => pubAction(id, ['scheduled', 'ready', 'failed'], (p) => { p.status = 'cancelled'; }),
   approve: (id) => bossAction(id, (t) => { need(t, ...AWAITING); t.status = 'approved'; log(t, 'boss', 'Big Boss aprovou a entrega.'); }),
   requestChanges: (id, feedback) => bossAction(id, (t) => {
     need(t, ...AWAITING);

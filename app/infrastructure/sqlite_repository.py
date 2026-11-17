@@ -7,7 +7,7 @@ from dataclasses import asdict
 from pathlib import Path
 
 from app.domain.errors import NotFound
-from app.domain.models import AREA_COUNT, Agent, Area, QualitySettings, Task
+from app.domain.models import AREA_COUNT, Agent, Area, Publication, QualitySettings, Task
 
 
 class SqliteOfficeRepository:
@@ -58,6 +58,16 @@ class SqliteOfficeRepository:
 
     def save_task(self, task: Task) -> None:
         self._put("task", task.id, task.to_dict())
+
+    # ---- publications --------------------------------------------------
+    def list_publications(self) -> list[Publication]:
+        return [Publication.from_dict(d) for d in self._all("publication")]
+
+    def get_publication(self, publication_id: str) -> Publication:
+        return Publication.from_dict(self._get("publication", publication_id, "Publicação não encontrada."))
+
+    def save_publication(self, publication: Publication) -> None:
+        self._put("publication", publication.id, publication.to_dict())
 
     # ---- settings ------------------------------------------------------
     def get_settings(self) -> QualitySettings:

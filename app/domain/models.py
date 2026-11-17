@@ -278,3 +278,109 @@ class Task:
         data["events"] = [TaskEvent(**e) for e in data.get("events", [])]
         data["activity"] = Activity(**data["activity"]) if data.get("activity") else None
         return Task(**data)
+
+
+# ---------------------------------------------------------------- social publishing
+class Channel(StrEnum):
+    LINKEDIN = "linkedin"
+    INSTAGRAM = "instagram"
+    FACEBOOK = "facebook"
+
+
+class PublicationStatus(StrEnum):
+    SCHEDULED = "scheduled"  # aguardando o horário
+    READY = "ready"  # horário chegou e a rede não está conectada: alguém publica e marca como publicada
+    PUBLISHED = "published"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+
+def parse_moment(value: str) -> datetime:
+    try:
+        moment = datetime.fromisoformat(value.strip())
+    except (AttributeError, ValueError) as exc:
+        raise DomainError("Data e hora da publicação inválidas.") from exc
+    if moment.tzinfo is None:
+        raise DomainError("Informe a data e hora da publicação com fuso horário.")
+    return moment
+
+
+@dataclass
+class Publication:
+    id: str
+    task_id: str
+    task_title: str
+    area_id: int
+    channel: Channel
+    text: str
+    scheduled_at: str
+    status: PublicationStatus = PublicationStatus.SCHEDULED
+    url: str = ""
+    error: str = ""
+    published_at: str = ""
+    created_at: str = field(default_factory=now_iso)
+    updated_at: str = field(default_factory=now_iso)
+
+    @staticmethod
+    def schedule(task: Task, channel: str, text: str, scheduled_at: str) -> "Publication":
+        if task.status is not TaskStatus.APPROVED:
+            raise DomainError("Só entregas aprovadas por você podem ser publicadas.")
+        try:
+            chosen = Channel(channel)
+        except ValueError as exc:
+            raise DomainError("Rede social inválida.") from exc
+        if not text.strip():
+            raise DomainError("Escreva o texto da publicação.")
+        moment = parse_moment(scheduled_at)
+        return Publication(
+            id=new_id(), task_id=task.id, task_title=task.title, area_id=task.area_id, channel=chosen,
+            text=text.strip(), scheduled_at=moment.astimezone(timezone.utc).isoformat(timespec="seconds"),
+        )
+
+    def is_due(self, now: datetime) -> bool:
+        return self.status is PublicationStatus.SCHEDULED and datetime.fromisoformat(self.scheduled_at) <= now
+
+    def mark_ready(self) -> None:
+        self._require(PublicationStatus.SCHEDULED)
+        self.status = PublicationStatus.READY
+        self._touch()
+
+    def mark_published(self, url: str = "") -> None:
+        self._require(PublicationStatus.SCHEDULED, PublicationStatus.READY, PublicationStatus.FAILED)
+        self.status = PublicationStatus.PUBLISHED
+        self.url = url.strip()
+        self.error = ""
+        self.published_at = now_iso()
+        self._touch()
+
+    def fail(self, error: str) -> None:
+        self._require(PublicationStatus.SCHEDULED)
+        self.status = PublicationStatus.FAILED
+        self.error = error
+        self._touch()
+
+    def retry(self) -> None:
+        self._require(PublicationStatus.FAILED)
+        self.status = PublicationStatus.SCHEDULED
+        self.error = ""
+        self.scheduled_at = now_iso()
+        self._touch()
+
+    def cancel(self) -> None:
+        self._require(PublicationStatus.SCHEDULED, PublicationStatus.READY, PublicationStatus.FAILED)
+        self.status = PublicationStatus.CANCELLED
+        self._touch()
+
+    def _require(self, *allowed: PublicationStatus) -> None:
+        if self.status not in allowed:
+            raise InvalidTransition("A publicação não permite essa ação no estado atual.")
+
+    def _touch(self) -> None:
+        self.updated_at = now_iso()
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+    @staticmethod
+    def from_dict(data: dict) -> "Publication":
+        return Publication(**{**data, "channel": Channel(data["channel"]), "status": PublicationStatus(data["status"])})

@@ -4,6 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Escritório Virtual · LFTM</title>
+  <meta name="theme-color" content="#0C4546">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Escritório">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="img/icon-192.png">
   <link rel="stylesheet" href="https://use.typekit.net/aem7vcw.css">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="css/styles.css">
@@ -12,9 +17,10 @@
   <header class="topbar">
     <div class="brand"><img src="img/logo-white.png" alt="Lifetime"><span>Escritório Virtual</span></div>
     <div class="stats" id="stats"></div>
-    <button class="btn ghost" id="btn-dash">Dashboards</button>
-    <button class="btn ghost" id="btn-inbox">Entregas <span class="count" id="inbox-count" hidden>0</span></button>
-    <button class="btn primary" id="btn-delegate">Delegar tarefa</button>
+    <button class="btn ghost" id="btn-dash" title="Dashboards"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span class="lbl">Dashboards</span></button>
+    <button class="btn ghost" id="btn-pubs" title="Publicações"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg><span class="lbl">Publicações</span><span class="count" id="pubs-count" hidden>0</span></button>
+    <button class="btn ghost" id="btn-inbox" title="Entregas"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5h13L22 12v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z"/></svg><span class="lbl">Entregas</span><span class="count" id="inbox-count" hidden>0</span></button>
+    <button class="btn primary" id="btn-delegate" title="Delegar tarefa"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span class="lbl">Delegar tarefa</span></button>
   </header>
   <div class="banner" id="banner" hidden></div>
   <div class="stage">

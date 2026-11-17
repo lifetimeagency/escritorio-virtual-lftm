@@ -4,12 +4,14 @@ import { inPoly } from './iso.js';
 import { render, bounds, keyOf, seatPos, assets, BOSS, COS } from './scene.js';
 import { createUI, AWAITING } from './ui.js';
 import { createDashboard } from './dashboard.js';
+import { createLife } from './life.js';
 
 const canvas = document.getElementById('office');
 const ctx = canvas.getContext('2d');
 const tooltip = document.getElementById('tooltip');
 
 const store = { state: null, working: new Set(), hover: null, selected: null, flights: [] };
+const life = createLife();
 const cam = { x: 0, y: 0, zoom: 1, auto: true };
 let hits = [];
 let dirty = true;
@@ -81,6 +83,7 @@ async function reload() {
   if (store.state) animateChanges(store.state, next);
   store.state = next;
   store.working = new Set(next.tasks.flatMap((t) => (['in_production', 'in_review'].includes(t.status) && t.activity ? t.activity.agent_ids : [])));
+  life.sync(next, store.working, performance.now());
   ui.onState();
   dashboard.refresh();
   dirty = true;
@@ -103,7 +106,7 @@ function describe(target) {
   if (target.type === 'seat') return area.name ? `Contratar agente para ${area.name}` : 'Defina a área antes de contratar';
   if (target.type === 'dash') return area.name ? `Dashboard de ${area.name}` : 'Dashboard da agência';
   const a = s.agents.find((x) => x.id === target.agentId);
-  return a ? `${a.name} · ${a.role}${store.working.has(a.id) ? ' — trabalhando' : ''}` : '';
+  return a ? `${a.name} · ${a.role} — ${life.activity(a.id, store.working)}` : '';
 }
 
 const pointers = new Map();
@@ -163,12 +166,17 @@ assets.logo.addEventListener('load', () => { dirty = true; });
 document.fonts?.load('600 11px urbane').then(() => { dirty = true; }).catch(() => {});
 
 // ---- render loop
+let lastStep = 0, lastDraw = 0;
 function frame(t) {
   requestAnimationFrame(frame);
+  if (!store.state || !size.w) return;
+  life.step(t, lastStep ? t - lastStep : 0, store.working);
+  lastStep = t;
   store.flights = store.flights.filter((f) => t < f.t0 + f.dur);
-  const animating = store.working.size > 0 || store.flights.length > 0;
-  if (!store.state || !size.w || !(dirty || animating)) return;
-  dirty = false;
+  const animating = store.working.size > 0 || store.flights.length > 0 || life.busy();
+  // full speed for papers in flight; people walking and playing look fine at ~30 fps
+  if (!dirty && (!animating || (!store.flights.length && t - lastDraw < 32))) return;
+  dirty = false; lastDraw = t;
   const dpr = window.devicePixelRatio || 1;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -186,7 +194,7 @@ function frame(t) {
     (load[x.area_id] ||= [0, 0, 0, 0, 0])[i] += 1;
   }
   for (const k of Object.keys(load)) { const max = Math.max(...load[k]); load[k] = load[k].map((v) => v / max); }
-  hits = render(ctx, { state: store.state, working: store.working, hover: store.hover, selected: store.selected, zoom: cam.zoom, flights: store.flights, counts, load }, t);
+  hits = render(ctx, { state: store.state, working: store.working, hover: store.hover, selected: store.selected, zoom: cam.zoom, flights: store.flights, counts, load, life }, t);
 }
 
 let dashboard;
@@ -196,3 +204,6 @@ resize();
 reload().catch((e) => ui.toast(e.message, true));
 setInterval(() => { if (!document.hidden) reload().catch(() => {}); }, 1500);
 requestAnimationFrame(frame);
+
+// Installable on phones (home screen) when served by the server version; the Artifact runs inside Claude.
+if ('serviceWorker' in navigator && !window.claude) navigator.serviceWorker.register('sw.js').catch(() => {});

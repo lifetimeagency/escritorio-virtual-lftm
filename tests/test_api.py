@@ -33,6 +33,11 @@ def test_full_flow_over_http():
         assert len(full) == 1 and len(full[0]["reviews"]) == 2 and full[0]["contributions"][0]["agent_name"] == "Bia"
 
         assert client.post(f"/api/tasks/{task_id}/approve").json()["status"] == "approved"
+        early = client.post("/api/publications", json={"task_id": task_id, "channel": "linkedin", "text": "Post", "scheduled_at": "2026-01-01T09:00:00-03:00"})
+        assert early.status_code == 201 and early.json()["status"] == "scheduled"
+        assert client.get("/api/state").json()["publications"][0]["id"] == early.json()["id"]
+        assert client.post(f"/api/publications/{early.json()['id']}/published", json={"url": ""}).json()["status"] == "published"
+        assert client.post("/api/publications", json={"task_id": task_id, "channel": "x", "text": "t", "scheduled_at": "2026-01-01T09:00:00Z"}).status_code == 409
         assert client.post(f"/api/tasks/{task_id}/approve").status_code == 409
         assert client.get("/api/tasks/nope").status_code == 404
         assert client.get("/").status_code in (200, 404)

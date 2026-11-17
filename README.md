@@ -21,6 +21,15 @@ Chief of Staff (filtro de qualidade) e a sala do Big Boss.
 
 Os padrões de qualidade e o número de rodadas são editados na sala do CoS.
 
+6. **Publicar** — numa entrega aprovada, o Big Boss agenda a publicação por rede (LinkedIn, Instagram, Facebook),
+   com data, hora e texto. No horário, uma rede com conta conectada publica sozinha; sem conta conectada, a
+   publicação vai para **Publicações → Prontas**, com o texto para copiar, e alguém marca quando publicar.
+   Nada é publicado sem a aprovação do Big Boss.
+
+**Vida no escritório** — sem tarefa, os agentes saem da mesa para a copa, o sofá, os puffs, o pingue-pongue e a
+quadra de padel; quando recebem trabalho, voltam rápido para a mesa. É só visual e roda no navegador de quem está
+vendo (`web/js/life.js`).
+
 Cada mesa tem uma tela de dashboard (também no botão **Dashboards**): tarefas por etapa, entregas ao longo do
 tempo, padrões que mais devolvem entregas, participação do time e a lista de tarefas, com filtro de período e área.
 Os números saem das próprias tarefas; novos blocos entram em `BLOCKS`, em `web/js/dashboard.js`.
@@ -33,6 +42,8 @@ Os números saem das próprias tarefas; novos blocos entram em `BLOCKS`, em `web
 | Agentes | Claude da pessoa que está com a página aberta | API do Claude (`ANTHROPIC_API_KEY`) |
 | Dados | Banco do próprio artefato | `data/office.db` |
 | Execução | Enquanto a página está aberta (retoma ao reabrir) | Em segundo plano no servidor |
+| Celular | Abre no app do Claude | Instalável na tela inicial (PWA) |
+| Publicação nas redes | Fila manual (artefato não acessa as redes) | Fila no servidor; automática quando houver conta conectada |
 
 A interface (`web/js`) é a mesma; só muda o módulo de API (`web/js/api.js` no servidor, `web/artifact/api.js` no
 artefato).
@@ -79,9 +90,18 @@ web                 interface (canvas isométrico + painel), sem etapa de build
 - O provedor do modelo fica atrás da porta `LlmGateway`; trocar de provedor é trocar o adaptador.
 - O servidor não tem autenticação e escuta em `127.0.0.1`. Não expor em rede sem colocar autenticação na frente.
 
+## Publicação nas redes: o que falta para ser automática
+
+A porta `SocialPublisher` (`app/application/ports.py`) é onde cada rede entra. Hoje o adaptador é
+`NoConnectedAccounts` (`app/infrastructure/social.py`): tudo vai para a fila manual. Para publicar sozinho é preciso,
+por rede: conta empresarial, app aprovado na rede (Meta / LinkedIn), credenciais guardadas fora do código e o aval de
+compliance sobre publicar sem uma pessoa no último clique. O Instagram só aceita posts com imagem.
+
 ## Fora do escopo
 
 - Autenticação/SSO e perfis de acesso no servidor.
 - Infraestrutura Azure (IaC, pipeline de deploy).
-- Ferramentas para os agentes (busca na web, arquivos, integrações) — hoje eles produzem texto a partir do briefing.
+- Ferramentas para os agentes (busca na web, arquivos, imagens) — hoje eles produzem texto a partir do briefing.
+- Conexão com as contas das redes sociais (ver "Publicação nas redes").
+- App nativo nas lojas (App Store / Google Play).
 - Histórico de conversas com agentes individuais; a comunicação segue o fluxo Big Boss → Head → CoS → Big Boss.

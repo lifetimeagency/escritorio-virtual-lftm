@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from app.domain.models import Agent, Area, QualitySettings, Task
+from app.domain.models import Agent, Area, Channel, Publication, QualitySettings, Task
 
 
 class LlmError(Exception):
@@ -34,3 +34,21 @@ class OfficeRepository(Protocol):
 
     def get_settings(self) -> QualitySettings: ...
     def save_settings(self, settings: QualitySettings) -> None: ...
+
+    def list_publications(self) -> list[Publication]: ...
+    def get_publication(self, publication_id: str) -> Publication: ...
+    def save_publication(self, publication: Publication) -> None: ...
+
+
+class PublishError(Exception):
+    """The social network refused or failed the post. The message is safe to show to the user."""
+
+
+class SocialPublisher(Protocol):
+    """Posts to the agency's social accounts. A channel that is not connected is published by a person."""
+
+    def connected(self, channel: Channel) -> bool: ...
+
+    async def publish(self, publication: Publication) -> str:
+        """Posts and returns the public URL of the post."""
+        ...

@@ -34,5 +34,16 @@ class TaskIn(BaseModel):
     area_id: int
 
 
+class PublicationIn(BaseModel):
+    task_id: str
+    channel: str
+    text: str = Field(max_length=10000)
+    scheduled_at: str
+
+
+class PublishedIn(BaseModel):
+    url: str = Field(default="", max_length=2000)
+
+
 class FeedbackIn(BaseModel):
     feedback: str = Field(max_length=8000)

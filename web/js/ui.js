@@ -14,6 +14,25 @@ const STAGE = {
   revising: 'Head ajustando a entrega', reviewing: 'CoS avaliando',
 };
 export const AWAITING = ['delivered', 'escalated'];
+const CHANNELS = { linkedin: 'LinkedIn', instagram: 'Instagram', facebook: 'Facebook' };
+const PUB_STATUS = {
+  scheduled: ['Agendada', 'review'], ready: ['Pronta para publicar', 'deliv'], published: ['Publicada', 'ok'],
+  failed: ['Falhou', 'fail'], cancelled: ['Cancelada', ''],
+};
+const PUB_ATTENTION = ['ready', 'failed'];
+const when = (iso) => new Date(iso).toLocaleString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+function nextHourInput() { // value for <input type="datetime-local">, in the viewer's time zone
+  const d = new Date(Date.now() + 3600e3); d.setMinutes(0, 0, 0);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+// Social posts are plain text: drop the Markdown marks the deliverable may carry.
+function plain(src) {
+  return String(src || '').replace(/\r/g, '')
+    .replace(/^#{1,6}\s+/gm, '').replace(/\*\*([^*]+)\*\*/g, '$1').replace(/(^|[^*])\*([^*\s][^*]*)\*/g, '$1$2')
+    .replace(/`([^`]+)`/g, '$1').replace(/\[([^\]]+)\]\((https?:[^)]+)\)/g, '$1 ($2)').replace(/^\s*[-*]\s+/gm, '• ')
+    .replace(/\n{3,}/g, '\n\n').trim();
+}
 
 function ago(isoDate) {
   const s = Math.max(0, (Date.now() - new Date(isoDate).getTime()) / 1000);
@@ -106,8 +125,59 @@ export function createUI({ store, reload, onChange, openDashboard }) {
     return `<div class="who"><div class="av" data-look="${a.look}"></div><div><b>${esc(a.name)}</b><span>${esc(a.role)}</span></div></div>`;
   }
 
+  const pubChip = (p) => `<span class="chip ${PUB_STATUS[p.status][1]}">${PUB_STATUS[p.status][0]}</span>`;
+  const pubItem = (p, sub) => `<button class="item" data-act="pub" data-id="${p.id}"><div class="t"><span>${CHANNELS[p.channel]} · ${esc(when(p.scheduled_at))}</span>${pubChip(p)}</div><div class="s">${esc(sub ?? p.task_title)}</div></button>`;
+  const noAccounts = () => !(st().social?.connected || []).length;
+  function publishBlock(t) {
+    const pubs = (st().publications || []).filter((p) => p.task_id === t.id);
+    const note = noAccounts()
+      ? 'Nenhuma conta de rede social está conectada ainda. No horário marcado, a publicação aparece em Publicações como pronta, com o texto para copiar, e você marca quando publicar.'
+      : 'Redes conectadas publicam sozinhas no horário marcado.';
+    return `<h3>Publicação nas redes</h3>
+      ${pubs.length ? `<div class="list">${pubs.map((p) => pubItem(p, p.status === 'published' && p.published_at ? `Publicada em ${when(p.published_at)}` : '')).join('')}</div>` : ''}
+      <details data-key="publish" ${pubs.length ? '' : 'open'}><summary>Agendar publicação</summary><div class="in"><form data-form="publish">
+        <label>Rede<select name="channel">${Object.entries(CHANNELS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></label>
+        <label>Data e hora<input type="datetime-local" name="when" value="${nextHourInput()}"></label>
+        ${area_('Texto da publicação', 'text', plain(t.deliverable), 9, 'Texto que vai para a rede')}
+        <p class="note">${note} O Instagram só aceita publicações com imagem.</p>
+        <button class="btn primary block">Agendar publicação</button></form></div></details>`;
+  }
+
   // ---- views
   const views = {
+    pubs() {
+      const all = st().publications || [];
+      const groups = { ready: all.filter((p) => PUB_ATTENTION.includes(p.status)), scheduled: all.filter((p) => p.status === 'scheduled'), published: all.filter((p) => p.status === 'published').reverse() };
+      let html = tabs([['ready', `Prontas${groups.ready.length ? ` (${groups.ready.length})` : ''}`], ['scheduled', 'Agendadas'], ['published', 'Publicadas']], panel.tab);
+      const empty = {
+        ready: 'Nada esperando para ser publicado.',
+        scheduled: 'Nenhuma publicação agendada.<br>Agende a partir de uma entrega aprovada.',
+        published: 'Nenhuma publicação feita ainda.',
+      }[panel.tab];
+      const list = groups[panel.tab];
+      html += list.length ? `<div class="list">${list.map((p) => pubItem(p)).join('')}</div>` : `<div class="empty">${empty}</div>`;
+      return { title: 'Publicações', sub: 'Entregas aprovadas agendadas para as redes sociais', html };
+    },
+
+    pub() {
+      const p = (st().publications || []).find((x) => x.id === panel.pubId);
+      if (!p) return { title: 'Publicação', sub: '', html: '<div class="empty">Publicação não encontrada.</div>' };
+      const link = /^https?:\/\//.test(p.url) ? `<a href="${esc(p.url)}" target="_blank" rel="noopener noreferrer">${esc(p.url)}</a>` : esc(p.url);
+      const markForm = `<form data-form="published">${field('Link da publicação', 'url', '', '(opcional)')}<div class="row-actions"><button class="btn primary">Marcar como publicada</button></div></form>`;
+      const status = {
+        scheduled: `<div class="callout info"><p>Agendada para <b>${esc(when(p.scheduled_at))}</b>. ${noAccounts() ? 'No horário, ela vai para as prontas para você publicar.' : 'Ela será publicada automaticamente no horário.'}</p><button class="link muted" data-act="pub-cancel">Cancelar publicação</button></div>`,
+        ready: `<div class="callout ok"><p><b>Chegou a hora.</b> Copie o texto, publique no ${CHANNELS[p.channel]} e marque aqui.</p>${markForm}<button class="link muted" data-act="pub-cancel">Cancelar publicação</button></div>`,
+        failed: `<div class="callout bad"><p><b>A publicação falhou.</b> ${esc(p.error)}</p><div class="row-actions"><button class="btn primary" data-act="pub-retry">Tentar de novo</button><button class="btn danger" data-act="pub-cancel">Cancelar</button></div></div>`,
+        published: `<div class="callout ok"><p>Publicada${p.published_at ? ` em ${esc(when(p.published_at))}` : ''}.</p>${p.url ? `<p>${link}</p>` : ''}</div>`,
+        cancelled: '<div class="callout">Publicação cancelada.</div>',
+      }[p.status];
+      const html = `${status}
+        <div class="head-row"><h3>Texto</h3><button class="link" data-act="pub-copy">Copiar</button></div>
+        <div class="doc pre">${esc(p.text)}</div>
+        <div class="row-actions" style="margin-top:12px"><button class="btn" data-act="task" data-id="${p.task_id}">Ver a entrega</button></div>`;
+      return { title: `${CHANNELS[p.channel]} · ${when(p.scheduled_at)}`, sub: `${p.task_title} · ${PUB_STATUS[p.status][0]}`, html };
+    },
+
     boss() {
       const waiting = awaiting();
       let html = tabs([['delegate', 'Delegar'], ['inbox', `Entregas${waiting.length ? ` (${waiting.length})` : ''}`], ['all', 'Todas']], panel.tab);
@@ -223,7 +293,7 @@ export function createUI({ store, reload, onChange, openDashboard }) {
         const names = (t.activity?.agent_ids || []).map((id) => (id === 'cos' ? 'CoS' : agent(id)?.name)).filter(Boolean).join(', ');
         action = `<div class="callout info"><p><b>${STAGE[t.activity?.stage] || 'Na fila'}</b>${names ? ` — ${esc(names)}` : ''}${t.review_round > 1 ? ` · rodada ${t.review_round}` : ''}</p><button class="link muted" data-act="cancel">Cancelar tarefa</button></div>`;
       } else if (t.status === 'approved') {
-        action = '<div class="callout ok">Entrega aprovada por você.</div>';
+        action = `<div class="callout ok">Entrega aprovada por você.</div>${publishBlock(t)}`;
       }
 
       const review = (r) => `<p><b>${r.approved ? 'Aprovada' : 'Devolvida'}</b> — ${esc(r.summary)}</p>
@@ -302,6 +372,13 @@ export function createUI({ store, reload, onChange, openDashboard }) {
     else if (d.act === 'agent') open({ view: 'agent', agentId: d.id });
     else if (d.act === 'delegate-to') open({ view: 'boss', tab: 'delegate', areaId: Number(d.id) });
     else if (d.act === 'dash') openDashboard(Number(d.id));
+    else if (d.act === 'pub') open({ view: 'pub', pubId: d.id });
+    else if (d.act === 'pub-cancel') await run(() => api.cancelPublication(panel.pubId), 'Publicação cancelada.');
+    else if (d.act === 'pub-retry') await run(() => api.retryPublication(panel.pubId), 'Publicação reagendada para agora.');
+    else if (d.act === 'pub-copy') {
+      const p = st().publications.find((x) => x.id === panel.pubId);
+      try { await navigator.clipboard.writeText(p.text); toast('Texto copiado.'); } catch { toast('Não foi possível copiar aqui. Selecione o texto e copie.', true); }
+    }
     else if (d.act === 'hire-at') open({ view: 'hire', areaId: Number(d.area), seat: Number(d.seat) });
     else if (d.act === 'ask-on') { panel.asking = true; paint(true); body.querySelector('textarea')?.focus(); }
     else if (d.act === 'ask-off') { panel.asking = false; paint(true); }
@@ -332,6 +409,15 @@ export function createUI({ store, reload, onChange, openDashboard }) {
       if (a) open({ view: 'area', areaId: panel.areaId });
     } else if (kind === 'agent') {
       if (await run(() => api.updateAgent(panel.agentId, f), 'Agente atualizado.')) { dirty = false; paint(true); }
+    } else if (kind === 'publish') {
+      const moment = f.when ? new Date(f.when) : null;
+      if (!moment || Number.isNaN(moment.getTime())) toast('Informe a data e a hora da publicação.', true);
+      else {
+        const p = await run(() => api.schedulePublication({ task_id: panel.taskId, channel: f.channel, text: f.text, scheduled_at: moment.toISOString() }), 'Publicação agendada.');
+        if (p) { dirty = false; paint(true); }
+      }
+    } else if (kind === 'published') {
+      if (await run(() => api.markPublished(panel.pubId, f.url), 'Marcada como publicada.')) { dirty = false; paint(true); }
     } else if (kind === 'changes') {
       if (await run(() => api.requestChanges(panel.taskId, f.feedback), 'Devolvida para a área.')) { panel.asking = false; dirty = false; paint(true); }
     }
@@ -341,6 +427,8 @@ export function createUI({ store, reload, onChange, openDashboard }) {
   $('btn-delegate').addEventListener('click', () => open({ view: 'boss', tab: 'delegate' }));
   $('btn-inbox').addEventListener('click', () => open({ view: 'boss', tab: 'inbox' }));
   $('btn-dash').addEventListener('click', () => openDashboard(null));
+  $('btn-pubs').addEventListener('click', () => open({ view: 'pubs', tab: (st().publications || []).some((p) => PUB_ATTENTION.includes(p.status)) ? 'ready' : 'scheduled' }));
+  let readyBefore = null;
 
   // ---- called after every state refresh
   function onState() {
@@ -349,6 +437,11 @@ export function createUI({ store, reload, onChange, openDashboard }) {
     const waiting = n(AWAITING);
     $('stats').innerHTML = `<span class="stat"><b>${s.agents.length}</b> agentes</span><span class="stat"><b>${n(['in_production'])}</b> em produção</span><span class="stat"><b>${n(['in_review'])}</b> com o CoS</span><span class="stat"><b>${waiting}</b> aguardando você</span>`;
     $('inbox-count').hidden = !waiting; $('inbox-count').textContent = waiting;
+    const attention = (s.publications || []).filter((p) => PUB_ATTENTION.includes(p.status));
+    $('pubs-count').hidden = !attention.length; $('pubs-count').textContent = attention.length;
+    const readyNow = new Set(attention.filter((p) => p.status === 'ready').map((p) => p.id));
+    if (readyBefore) for (const id of readyNow) if (!readyBefore.has(id)) { const p = s.publications.find((x) => x.id === id); toast(`Hora de publicar no ${CHANNELS[p.channel]}: ${p.task_title}`); }
+    readyBefore = readyNow;
     const banner = $('banner');
     banner.hidden = s.llm.configured;
     if (!s.llm.configured) { if (s.llm.hint) banner.textContent = s.llm.hint; else banner.innerHTML = 'Os agentes ainda não conseguem trabalhar: defina <code>ANTHROPIC_API_KEY</code> no ambiente do servidor e reinicie. Você já pode montar as áreas e contratar.'; }

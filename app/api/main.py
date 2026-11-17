@@ -1,6 +1,8 @@
 """HTTP entry point: wires the adapters and exposes the office API plus the web UI."""
 from __future__ import annotations
 
+import asyncio
+import logging
 import os
 from contextlib import asynccontextmanager
 from dataclasses import asdict
@@ -11,14 +13,17 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.application.office_service import OfficeService
-from app.application.ports import LlmGateway, OfficeRepository
+from app.application.ports import LlmGateway, OfficeRepository, SocialPublisher
+from app.application.publishing import PublishingService
 from app.application.task_workflow import TaskWorkflow
 from app.domain.errors import DomainError, NotFound
 from app.domain.models import SEATS_PER_AREA, Task
 
-from .schemas import AgentIn, AreaIn, FeedbackIn, HireIn, SettingsIn, TaskIn
+from .schemas import AgentIn, AreaIn, FeedbackIn, HireIn, PublicationIn, PublishedIn, SettingsIn, TaskIn
 
 WEB_DIR = Path(__file__).resolve().parents[2] / "web"
+PUBLISH_EVERY_SECONDS = 30
+log = logging.getLogger(__name__)
 
 
 def _task_summary(task: Task) -> dict:
@@ -37,15 +42,30 @@ def _task_summary(task: Task) -> dict:
     }
 
 
-def create_app(repo: OfficeRepository, llm: LlmGateway) -> FastAPI:
+def create_app(repo: OfficeRepository, llm: LlmGateway, publisher: SocialPublisher | None = None) -> FastAPI:
+    if publisher is None:
+        from app.infrastructure.social import NoConnectedAccounts
+
+        publisher = NoConnectedAccounts()
     office = OfficeService(repo)
+    publishing = PublishingService(repo, publisher)
     workflow_holder: dict[str, TaskWorkflow] = {}
+
+    async def publish_loop() -> None:
+        while True:
+            try:
+                await publishing.run_due()
+            except Exception:  # noqa: BLE001 - keep the queue running
+                log.exception("Publishing round failed")
+            await asyncio.sleep(PUBLISH_EVERY_SECONDS)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
         workflow_holder["wf"] = TaskWorkflow(repo, llm)
         workflow_holder["wf"].resume_pending()
+        publisher_task = asyncio.get_running_loop().create_task(publish_loop())
         yield
+        publisher_task.cancel()
 
     app = FastAPI(title="Escritório Virtual LFTM", lifespan=lifespan)
 
@@ -68,6 +88,8 @@ def create_app(repo: OfficeRepository, llm: LlmGateway) -> FastAPI:
             "agents": [asdict(a) for a in repo.list_agents()],
             "tasks": [_task_summary(t) for t in tasks],
             "settings": asdict(office.get_settings()),
+            "publications": [p.to_dict() for p in sorted(repo.list_publications(), key=lambda p: p.scheduled_at)],
+            "social": publisher.describe() if hasattr(publisher, "describe") else {"connected": []},
             "llm": llm.describe(),
             "seats_per_area": SEATS_PER_AREA,
         }
@@ -120,6 +142,22 @@ def create_app(repo: OfficeRepository, llm: LlmGateway) -> FastAPI:
     @app.post("/api/tasks/{task_id}/cancel")
     async def cancel(task_id: str):
         return wf().cancel(task_id).to_dict()
+
+    @app.post("/api/publications", status_code=201)
+    def schedule_publication(body: PublicationIn):
+        return publishing.schedule(body.task_id, body.channel, body.text, body.scheduled_at).to_dict()
+
+    @app.post("/api/publications/{publication_id}/published")
+    def mark_published(publication_id: str, body: PublishedIn):
+        return publishing.mark_published(publication_id, body.url).to_dict()
+
+    @app.post("/api/publications/{publication_id}/retry")
+    def retry_publication(publication_id: str):
+        return publishing.retry(publication_id).to_dict()
+
+    @app.post("/api/publications/{publication_id}/cancel")
+    def cancel_publication(publication_id: str):
+        return publishing.cancel(publication_id).to_dict()
 
     app.mount("/", StaticFiles(directory=WEB_DIR, html=True), name="web")
     return app

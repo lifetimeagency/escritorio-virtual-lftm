@@ -26,4 +26,8 @@ export const api = {
   requestChanges: (id, feedback) => req('POST', `/api/tasks/${id}/request-changes`, { feedback }),
   retry: (id) => req('POST', `/api/tasks/${id}/retry`),
   cancel: (id) => req('POST', `/api/tasks/${id}/cancel`),
+  schedulePublication: (body) => req('POST', '/api/publications', body),
+  markPublished: (id, url) => req('POST', `/api/publications/${id}/published`, { url }),
+  retryPublication: (id) => req('POST', `/api/publications/${id}/retry`),
+  cancelPublication: (id) => req('POST', `/api/publications/${id}/cancel`),
 };
