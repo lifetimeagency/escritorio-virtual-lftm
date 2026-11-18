@@ -107,7 +107,7 @@ function describe(target) {
     return area.name ? `${area.name} — Head: ${head?.name || ''}` : `Mesa ${area.id} — definir área e Head`;
   }
   if (target.type === 'seat') return area.name ? `Contratar agente para ${area.name}` : 'Defina a área antes de contratar';
-  if (target.type === 'dash') return !area.name ? 'Dashboard da agência' : area.dashboard_url ? `Dashboard de ${area.name} — painel próprio da área` : `Dashboard de ${area.name}`;
+  if (target.type === 'dash') return !area.name ? 'Dashboard da agência' : /^https:\/\//.test(area.dashboard_url || '') ? `Dashboard de ${area.name} — abre o painel da área` : area.dashboard_url ? `Dashboard de ${area.name} — painel próprio da área` : `Dashboard de ${area.name}`;
   const a = s.agents.find((x) => x.id === target.agentId);
   return a ? `${a.name} · ${a.role} — ${life.activity(a.id, store.working)}` : '';
 }

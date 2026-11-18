@@ -357,7 +357,17 @@ export function createUI({ store, reload, onChange, openDashboard }) {
 
   function openTarget(target) {
     if (target.type === 'room') return open(target.room === 'boss' ? { view: 'boss', tab: awaiting().length ? 'inbox' : 'delegate' } : { view: 'cos', tab: 'standards' });
-    if (target.type === 'dash') return openDashboard(target.areaId);
+    if (target.type === 'dash') {
+      // An area whose dashboard lives in another app opens it straight away (the live, editable one);
+      // where the viewer blocks new windows, the overlay shows the button to open it.
+      const url = area(target.areaId)?.dashboard_url || '';
+      if (/^https:\/\//.test(url)) {
+        let win = null;
+        try { win = window.open(url, '_blank'); } catch { win = null; }
+        if (win) { try { win.opener = null; } catch { /* ignore */ } return undefined; }
+      }
+      return openDashboard(target.areaId);
+    }
     if (target.type === 'area') return open({ view: 'area', areaId: target.areaId });
     if (target.type === 'agent') return open({ view: 'agent', agentId: target.agentId });
     if (target.type === 'seat') return open(area(target.areaId).name ? { view: 'hire', areaId: target.areaId, seat: target.seat } : { view: 'area', areaId: target.areaId });
